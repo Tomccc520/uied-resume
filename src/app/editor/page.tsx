@@ -18,6 +18,7 @@ import ResumePreview from '@/components/ResumePreview'
 import TemplateStyleSync from '@/components/TemplateStyleSync'
 import Header from '@/components/Header'
 import EditorToolbar from '@/components/EditorToolbar'
+import AIConfigModal, { AIConfig } from '@/components/AIConfigModal'
 import { StyleProvider } from '@/contexts/StyleContext'
 import { useToastContext } from '@/components/Toast'
 import { useRealtimePreview } from '@/hooks/useRealtimePreview'
@@ -34,25 +35,21 @@ import {
   TemplateSelectorSkeleton, 
   ExportPreviewDialogSkeleton 
 } from '@/components/LoadingStates'
-import { StyleSettingsPanel } from '@/components/editor/StyleSettingsPanel'
 import { ThreeColumnLayout } from '@/components/editor/ThreeColumnLayout'
 import { SectionNavigation } from '@/components/editor/SectionNavigation'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { JDSuggestion } from '@/services/jdMatcher'
 import { PreviewPanel } from '@/components/preview'
-import { ExportProgressIndicator, ExportStep, ExportStatus } from '@/components/export/ExportProgressIndicator'
-import { PageBreakOverlay } from '@/components/export/PageBreakPreview'
-import { useExportProgress } from '@/hooks/useExportProgress'
-import { SaveStatusIndicator, SaveStatus, SaveHistoryItem } from '@/components/feedback/SaveStatusIndicator'
+import { ExportProgressIndicator } from '@/components/export/ExportProgressIndicator'
 import { ImportExportDialog, ImportedData } from '@/components/data/ImportExportDialog'
-import { StorageMonitor, StorageUsage, CleanupOptions } from '@/components/data/StorageMonitor'
 import { useStorageMonitor } from '@/hooks/useStorageMonitor'
-import { ContextMenu, ContextMenuItem } from '@/components/editor/ContextMenu'
+import { ContextMenu } from '@/components/editor/ContextMenu'
 import { BatchEditToolbar } from '@/components/editor/BatchEditToolbar'
 import { useContextMenu } from '@/hooks/useContextMenu'
 import { useBatchSelection } from '@/hooks/useBatchSelection'
 import { LoadingOverlay } from '@/components/feedback/LoadingOverlay'
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog'
+import { useEditorExportFlow } from '@/hooks/useEditorExportFlow'
 
 // 懒加载非关键组件 - 优化初始加载性能 (Requirements: 1.5)
 const ResumeEditor = dynamic(() => import('@/components/ResumeEditor'), {
@@ -60,8 +57,8 @@ const ResumeEditor = dynamic(() => import('@/components/ResumeEditor'), {
   ssr: false
 })
 
-// 懒加载 AI 助手组件
-const AIAssistant = dynamic(() => import('@/components/AIAssistant'), {
+// 懒加载统一 AI 助手面板
+const UnifiedAIPanel = dynamic(() => import('@/components/UnifiedAIPanel'), {
   loading: () => <AIAssistantSkeleton />,
   ssr: false
 })
@@ -78,33 +75,23 @@ const ExportPreviewDialog = dynamic(() => import('@/components/ExportPreviewDial
   ssr: false
 })
 
-// 懒加载 JD 匹配弹窗组件
-const JDMatcherModal = dynamic(
-  () => import('@/components/ai/JDMatcherModal'),
-  {
-    loading: () => <AIAssistantSkeleton />,
-    ssr: false
-  }
-)
-
-// 懒加载 AI 分步生成弹窗组件
-const StepwiseGeneratorModal = dynamic(
-  () => import('@/components/ai/StepwiseGeneratorModal'),
-  {
-    loading: () => <AIAssistantSkeleton />,
-    ssr: false
-  }
-)
-
 /**
  * 简历编辑器页面 - 简洁版
  * 采用与首页一致的简约设计风格
  */
 export default function EditorPage() {
-  const [isExporting, setIsExporting] = useState(false)
-  const [showAIAssistant, setShowAIAssistant] = useState(false)
-  const [aiAssistantType, setAiAssistantType] = useState<'summary' | 'experience' | 'skills' | 'education' | 'projects'>('summary')
-  const [aiAssistantContent, setAiAssistantContent] = useState('')
+  /**
+   * 编辑器调试日志
+   * 仅在开发环境输出，避免生产环境污染控制台
+   */
+  const logEditorDebug = useCallback((...args: unknown[]) => {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(...args)
+    }
+  }, [])
+
+  const [showUnifiedAI, setShowUnifiedAI] = useState(false)
+  const [showAIConfig, setShowAIConfig] = useState(false)
   const [isPreviewMode, setIsPreviewMode] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [showShortcutHelp, setShowShortcutHelp] = useState(false)
@@ -127,44 +114,17 @@ export default function EditorPage() {
     return getDefaultTemplate()
   })
   const [activeSection, setActiveSection] = useState('personal')
-  const [exportOptions, setExportOptions] = useState<{ margin: number; showPageBreaks: boolean; paper: 'a4' | 'letter' }>({ margin: 10, showPageBreaks: true, paper: 'a4' })
+  const [, setExportOptions] = useState<{ margin: number; showPageBreaks: boolean; paper: 'a4' | 'letter' }>({ margin: 10, showPageBreaks: true, paper: 'a4' })
   
   // 新增状态
   const [showExportDialog, setShowExportDialog] = useState(false)
   const [previewZoom, setPreviewZoom] = useState(100)
   const [currentPage, setCurrentPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  
-  // JD 匹配状态
-  const [showJDMatcher, setShowJDMatcher] = useState(false)
-  
-  // AI 分步生成状态
-  const [showStepwiseGenerator, setShowStepwiseGenerator] = useState(false)
-  
-  // 分页预览状态
-  const [showPageBreaks, setShowPageBreaks] = useState(false)
-  const [customBreakPositions, setCustomBreakPositions] = useState<number[]>([])
-  
-  // 导出进度 Hook
-  const {
-    progress: exportProgress,
-    estimatedTimeRemaining,
-    exportStatus,
-    isExporting: isExportInProgress,
-    canCancel,
-    startExport,
-    updateProgress,
-    setStep,
-    completeExport,
-    setError: setExportError,
-    cancelExport,
-    reset: resetExportProgress
-  } = useExportProgress()
+  const totalPages = 1
   
   const { t } = useLanguage()
 
-  const { success: showSuccess, error: showError, info: showInfo, removeToast } = useToastContext()
-  
+  const { success: showSuccess, error: showError, info: showInfo } = useToastContext()
   // 简历数据状态
   const [resumeData, setResumeData] = useState<ResumeData>({
     personalInfo: {
@@ -282,14 +242,31 @@ export default function EditorPage() {
     ]
   })
 
+  // 导出工作流 Hook
+  const {
+    isExporting,
+    handleExport,
+    handleExportByFormat,
+    exportProgress,
+    estimatedTimeRemaining,
+    exportStatus,
+    isExportInProgress,
+    canCancel,
+    cancelExport,
+    resetExportProgress
+  } = useEditorExportFlow({
+    resumeData,
+    resumeName: resumeData.personalInfo.name || '简历',
+    exportSuccessMessage: t.editor.messages.exportSuccess,
+    jsonExportSuccessMessage: t.editor.messages.jsonExportSuccess,
+    exportErrorMessage: t.editor.messages.exportError,
+    onSuccess: showSuccess,
+    onError: showError,
+    logger: logEditorDebug
+  })
+
   // 实时预览状态
-  const { 
-    previewData,
-    isUpdating, 
-    getUpdateStatus, 
-    performanceMetrics, 
-    forceUpdate 
-  } = useRealtimePreview(resumeData)
+  const { previewData, isUpdating } = useRealtimePreview(resumeData)
 
   /**
    * 保存简历数据到本地存储 - 使用 useCallback 优化
@@ -314,9 +291,7 @@ export default function EditorPage() {
   } = useAutoSave(resumeData, saveResumeData, {
     interval: 30000, // 30秒自动保存
     enabled: true,
-    onSaveSuccess: () => {
-      console.log(t.editor.messages.autoSaveSuccess)
-    },
+    onSaveSuccess: () => undefined,
     onSaveError: (error) => {
       console.error('自动保存失败:', error)
     }
@@ -326,17 +301,12 @@ export default function EditorPage() {
   const [showImportExportDialog, setShowImportExportDialog] = useState(false)
   
   // 存储监控 Hook
-  const {
-    usage: storageUsage,
-    refresh: refreshStorageUsage,
-    cleanupOldData: cleanupStorage
-  } = useStorageMonitor()
+  const { refresh: refreshStorageUsage } = useStorageMonitor()
   
   // 上下文菜单 Hook
   const {
     isOpen: isContextMenuOpen,
     position: contextMenuPosition,
-    openMenu: openContextMenu,
     closeMenu: closeContextMenu,
     menuItems: contextMenuItems
   } = useContextMenu()
@@ -344,12 +314,9 @@ export default function EditorPage() {
   // 批量选择 Hook (用于工作经历)
   const {
     selectedIds: selectedExperienceIds,
-    hasSelection: hasExperienceSelection,
     selectionCount: experienceSelectionCount,
-    toggleSelection: toggleExperienceSelection,
     selectAll: selectAllExperiences,
     clearSelection: clearExperienceSelection,
-    isSelected: isExperienceSelected,
     batchDelete: batchDeleteExperiences,
     batchCopy: batchCopyExperiences,
     batchMove: batchMoveExperiences
@@ -371,18 +338,8 @@ export default function EditorPage() {
   })
   
   // 全局加载状态
-  const [globalLoading, setGlobalLoading] = useState(false)
-  const [globalLoadingMessage, setGlobalLoadingMessage] = useState('')
-  
-  // 保存历史记录
-  const [saveHistory, setSaveHistory] = useState<SaveHistoryItem[]>([])
-  
-  // 计算保存状态
-  const saveStatus: SaveStatus = useMemo(() => {
-    if (isSaving) return 'saving'
-    if (hasUnsavedChanges) return 'unsaved'
-    return 'saved'
-  }, [isSaving, hasUnsavedChanges])
+  const [globalLoading, _setGlobalLoading] = useState(false)
+  const [globalLoadingMessage, _setGlobalLoadingMessage] = useState('')
   
   // 处理数据导入
   const handleDataImport = useCallback((data: ImportedData, mode: 'replace' | 'merge') => {
@@ -397,64 +354,6 @@ export default function EditorPage() {
     showSuccess(t.editor.messages.exportSuccess || '数据导入成功')
     refreshStorageUsage()
   }, [showSuccess, t, refreshStorageUsage])
-  
-  // 处理存储清理
-  const handleStorageCleanup = useCallback(async (options: CleanupOptions): Promise<number> => {
-    const freedBytes = await cleanupStorage(options)
-    refreshStorageUsage()
-    return freedBytes
-  }, [cleanupStorage, refreshStorageUsage])
-  
-  // 上下文菜单项生成器
-  const createExperienceContextMenuItems = useCallback((experienceId: string): ContextMenuItem[] => {
-    const isZh = t.common.edit === '编辑'
-    return [
-      {
-        id: 'edit',
-        label: t.common.edit,
-        onClick: () => {
-          setActiveSection('experience')
-        }
-      },
-      {
-        id: 'duplicate',
-        label: isZh ? '复制' : 'Duplicate',
-        onClick: () => {
-          const exp = resumeData.experience.find(e => e.id === experienceId)
-          if (exp) {
-            const newExp = { ...exp, id: `exp-${Date.now()}` }
-            setResumeData(prev => ({
-              ...prev,
-              experience: [...prev.experience, newExp]
-            }))
-            showSuccess(isZh ? '复制成功' : 'Duplicated successfully')
-          }
-        },
-        divider: true
-      },
-      {
-        id: 'delete',
-        label: t.common.delete,
-        danger: true,
-        onClick: () => {
-          setConfirmDialog({
-            isOpen: true,
-            title: isZh ? '确认删除' : 'Confirm Delete',
-            message: isZh ? '确定要删除这条工作经历吗？此操作无法撤销。' : 'Are you sure you want to delete this experience? This action cannot be undone.',
-            type: 'danger',
-            onConfirm: () => {
-              setResumeData(prev => ({
-                ...prev,
-                experience: prev.experience.filter(e => e.id !== experienceId)
-              }))
-              setConfirmDialog(prev => ({ ...prev, isOpen: false }))
-              showSuccess(isZh ? '删除成功' : 'Deleted successfully')
-            }
-          })
-        }
-      }
-    ]
-  }, [resumeData, setResumeData, showSuccess, t])
   
   // 批量删除工作经历
   const handleBatchDeleteExperiences = useCallback(() => {
@@ -506,45 +405,12 @@ export default function EditorPage() {
     }))
   }, [batchMoveExperiences, resumeData.experience, setResumeData])
   
-  // 更新保存历史
-  useEffect(() => {
-    if (lastSavedAt) {
-      setSaveHistory(prev => {
-        const newHistory: SaveHistoryItem[] = [
-          { timestamp: lastSavedAt, success: true },
-          ...prev.slice(0, 4) // 保留最近5条
-        ]
-        return newHistory
-      })
-    }
-  }, [lastSavedAt])
-
   /**
    * 手动保存 - 使用 useCallback 优化
    */
   const handleSave = useCallback(async () => {
     await saveNow()
   }, [saveNow])
-  
-  /**
-   * 导出 JSON 格式 - 使用 useCallback 优化
-   */
-  const handleExportJSON = useCallback(() => {
-    try {
-      const dataStr = JSON.stringify(resumeData, null, 2)
-      const blob = new Blob([dataStr], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${resumeData.personalInfo.name || '简历'}_${new Date().toISOString().split('T')[0]}.json`
-      link.click()
-      URL.revokeObjectURL(url)
-      showSuccess(t.editor.messages.jsonExportSuccess)
-    } catch (error) {
-      console.error('导出JSON失败:', error)
-      showError(t.editor.messages.exportError)
-    }
-  }, [resumeData, showSuccess, showError])
   
   /**
    * 从本地存储加载简历数据 - 增强错误恢复
@@ -558,7 +424,7 @@ export default function EditorPage() {
         if (parsedData?.personalInfo?.name) {
           setResumeData(parsedData)
         } else {
-          console.log('本地存储数据不完整，使用默认数据')
+          logEditorDebug('本地存储数据不完整，使用默认数据')
         }
       }
     } catch (error) {
@@ -576,7 +442,7 @@ export default function EditorPage() {
         console.error('备份恢复也失败:', backupError)
       }
     }
-  }, [])
+  }, [showInfo, t, logEditorDebug])
 
   /**
    * 保存当前模板到本地存储
@@ -592,210 +458,10 @@ export default function EditorPage() {
    * @param newData - 新的简历数据
    */
   const handleResumeUpdate = useCallback((newData: ResumeData) => {
-    console.log('编辑器页面接收到数据更新:', newData)
     setResumeData(newData)
   }, [])
 
   
-
-  /**
-   * 导出功能 - 简化版本，直接使用 html2canvas
-   * 不使用复杂的 exportStyleCapture 服务
-   */
-  const handleExport = useCallback(async (format: 'pdf' | 'png' | 'jpg') => {
-    try {
-      setIsExporting(true)
-      startExport(1)
-      
-      await new Promise(resolve => requestAnimationFrame(resolve))
-      
-      const element = document.getElementById('resume-preview')
-      if (!element) {
-        showError('请等待简历预览加载完成后再导出')
-        setIsExporting(false)
-        setExportError('预览元素未找到')
-        return
-      }
-
-      console.log('✅ 找到元素:', element)
-      console.log('📏 元素尺寸:', element.getBoundingClientRect())
-
-      setStep('preparing-styles')
-      updateProgress(10)
-
-      setStep('loading-fonts')
-      updateProgress(20)
-
-      await document.fonts.ready.catch(() => {
-        console.warn('⚠️ 字体加载超时')
-      })
-        updateProgress(30)
-
-      // 保存原始样式
-      const originalTransform = element.style.transform
-      const originalScale = element.style.scale
-      
-      // 查找并保存所有父元素的 transform
-      const parentElements: HTMLElement[] = []
-      const parentTransforms: string[] = []
-      let parent = element.parentElement
-      while (parent) {
-        parentElements.push(parent)
-        parentTransforms.push(parent.style.transform || '')
-        parent = parent.parentElement
-      }
-      
-      try {
-        // 临时移除所有变换
-        element.style.transform = 'none'
-        element.style.scale = '1'
-        parentElements.forEach(p => {
-          p.style.transform = 'none'
-        })
-        
-        element.classList.add('exporting')
-        element.offsetHeight
-        await new Promise(resolve => requestAnimationFrame(resolve))
-        
-        const rect = element.getBoundingClientRect()
-        const width = 612
-        const height = element.scrollHeight || rect.height || 792
-        
-        console.log('📐 使用尺寸:', { width, height })
-
-        const html2canvas = (await import('html2canvas')).default
-        
-        console.log('🎨 开始生成canvas...')
-        
-        setStep('rendering-page')
-        updateProgress(40)
-        
-        const canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          allowTaint: true,
-          backgroundColor: '#ffffff',
-          width: width,
-          height: height,
-          logging: true,
-          imageTimeout: 15000,
-          onclone: (clonedDoc, clonedElement) => {
-            console.log('🔄 处理克隆元素...')
-            clonedElement.style.width = `${width}px`
-            clonedElement.style.minHeight = `${height}px`
-            clonedElement.style.transform = 'none'
-            clonedElement.style.margin = '0'
-            
-            const buttonsToRemove = clonedElement.querySelectorAll('button, .no-export, [data-no-export]')
-            buttonsToRemove.forEach(btn => btn.remove())
-            console.log('🗑️ 移除了', buttonsToRemove.length, '个按钮')
-            
-            const pageBreakLines = clonedElement.querySelectorAll('[style*="dashed"]')
-            pageBreakLines.forEach(line => line.remove())
-            
-            console.log('✅ 克隆元素处理完成')
-          }
-        })
-        
-        console.log('✅ Canvas生成完成:', { width: canvas.width, height: canvas.height })
-        
-        updateProgress(70)
-        
-        // 恢复原始样式
-        element.style.transform = originalTransform
-        element.style.scale = originalScale
-        element.classList.remove('exporting')
-        parentElements.forEach((p, i) => {
-          p.style.transform = parentTransforms[i]
-        })
-
-        setStep('generating-file')
-        updateProgress(80)
-
-        if (format === 'pdf') {
-          const { jsPDF } = await import('jspdf')
-          const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-          const pdfWidth = 210
-          const pdfHeight = 297
-          const margin = 10
-          const contentWidth = pdfWidth - margin * 2
-          const contentHeight = pdfHeight - margin * 2
-          const pxToMmScale = contentWidth / canvas.width
-          const pageHeightPx = Math.floor(contentHeight / pxToMmScale)
-
-          let offsetY = 0
-          let pageIndex = 0
-          while (offsetY < canvas.height) {
-            if (pageIndex > 0) pdf.addPage()
-            const sliceHeight = Math.min(pageHeightPx, canvas.height - offsetY)
-            const pageCanvas = document.createElement('canvas')
-            pageCanvas.width = canvas.width
-            pageCanvas.height = sliceHeight
-            const ctx = pageCanvas.getContext('2d')
-            if (ctx) {
-              ctx.fillStyle = '#ffffff'
-              ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height)
-              ctx.drawImage(canvas, 0, offsetY, canvas.width, sliceHeight, 0, 0, pageCanvas.width, pageCanvas.height)
-              const pageImg = pageCanvas.toDataURL('image/png')
-              const imgH = contentWidth * (sliceHeight / canvas.width)
-              pdf.addImage(pageImg, 'PNG', margin, margin, contentWidth, imgH)
-            }
-            offsetY += sliceHeight
-            pageIndex++
-            updateProgress(80 + (pageIndex / Math.ceil(canvas.height / pageHeightPx)) * 15)
-          }
-
-          const fileName = `${resumeData.personalInfo.name || '简历'}_${new Date().toISOString().split('T')[0]}.pdf`
-          pdf.save(fileName)
-        } else if (format === 'png') {
-            const link = document.createElement('a')
-            link.download = `${resumeData.personalInfo.name || '简历'}_${new Date().toISOString().split('T')[0]}.png`
-            link.href = canvas.toDataURL('image/png')
-            link.click()
-        } else if (format === 'jpg') {
-            const link = document.createElement('a')
-            link.download = `${resumeData.personalInfo.name || '简历'}_${new Date().toISOString().split('T')[0]}.jpg`
-            link.href = canvas.toDataURL('image/jpeg', 0.9)
-            link.click()
-        }
-
-        completeExport()
-        showSuccess(t.editor.messages.exportSuccess)
-        
-        setTimeout(() => {
-          resetExportProgress()
-        }, 3000)
-      } catch (error) {
-        setExportError(error instanceof Error ? error.message : '导出失败')
-        throw error
-      } finally {
-        element.style.transform = originalTransform
-        element.style.scale = originalScale
-        element.classList.remove('exporting')
-        parentElements.forEach((p, i) => {
-          p.style.transform = parentTransforms[i]
-        })
-        setIsExporting(false)
-      }
-    } catch (error) {
-      console.error(`${format.toUpperCase()}导出失败:`, error)
-      showError(t.editor.messages.exportError)
-      setIsExporting(false)
-    }
-  }, [resumeData.personalInfo.name, showSuccess, showError, showInfo, startExport, updateProgress, setStep, completeExport, setExportError, resetExportProgress, t])
-
-  
-
-  /**
-   * 打开AI助手 - 使用 useCallback 优化
-   * @param type - AI助手类型
-   * @param content - 当前内容
-   */
-  const handleOpenAIAssistant = useCallback((type: 'summary' | 'experience' | 'skills' | 'education' | 'projects', content: string) => {
-    setAiAssistantType(type)
-    setAiAssistantContent(content)
-    setShowAIAssistant(true)
-  }, [])
 
   /**
    * 处理模板选择
@@ -806,16 +472,11 @@ export default function EditorPage() {
    * 修复：确保即使删除内容后也能正常切换模板
    */
   const handleTemplateSelect = useCallback((template: TemplateStyle) => {
-    console.log('=== 编辑器页面处理模板选择 ===')
-    console.log('选择的模板:', template)
-    console.log('模板ID:', template.id)
-    console.log('模板名称:', template.name)
-    
     // 检查简历数据完整性，如果数据为空或不完整，使用默认数据
     setResumeData(prevData => {
       // 确保至少有基本的个人信息结构
       if (!prevData.personalInfo || !prevData.personalInfo.name) {
-        console.log('⚠️ 检测到简历数据不完整，使用默认数据')
+        logEditorDebug('⚠️ 检测到简历数据不完整，使用默认数据')
         return {
           personalInfo: {
             name: '请填写姓名',
@@ -839,92 +500,184 @@ export default function EditorPage() {
     })
     
     setCurrentTemplate(template)
-    console.log('✅ 模板状态已更新')
     
     setShowTemplateSelector(false)
-    console.log('✅ 模板选择器已关闭')
-    
-    // 不显示切换提示
-    console.log('=== 模板选择处理完成 ===')
-  }, [showSuccess])
+  }, [logEditorDebug])
 
   /**
-   * 应用单个 JD 建议
-   * @param suggestion - JD 优化建议
+   * 应用AI优化建议
+   * @param content - 优化后的内容
+   * @param section - 要更新的部分
    */
-  const handleApplyJDSuggestion = useCallback((suggestion: JDSuggestion) => {
-    const updatedData = { ...resumeData }
-    
-    switch (suggestion.section) {
-      case 'skills':
-        // 添加建议的技能
-        const newSkills = suggestion.keywords.map((keyword, index) => ({
-          id: `skill-jd-${Date.now()}-${index}`,
-          name: keyword,
-          level: 70,
-          category: '技术技能'
-        }))
-        // 过滤掉已存在的技能
-        const existingSkillNames = updatedData.skills.map(s => s.name.toLowerCase())
-        const uniqueNewSkills = newSkills.filter(
-          s => !existingSkillNames.includes(s.name.toLowerCase())
-        )
-        updatedData.skills = [...updatedData.skills, ...uniqueNewSkills]
-        showSuccess(t.editor.messages.skillsUpdated)
-        break
-        
-      case 'summary':
-        // 在个人简介中添加关键词提示
-        const currentSummary = updatedData.personalInfo.summary || ''
-        if (suggestion.keywords.length > 0) {
-          const keywordHint = `具备 ${suggestion.keywords.join('、')} 相关经验。`
-          if (!currentSummary.includes(keywordHint)) {
-            updatedData.personalInfo.summary = currentSummary + ' ' + keywordHint
-          }
-        }
-        showSuccess(t.editor.messages.summaryUpdated)
-        break
-        
-      case 'experience':
-        // 在最近的工作经历中添加关键词
-        if (updatedData.experience.length > 0) {
-          const lastExp = updatedData.experience[0]
-          const keywordDesc = `展现了 ${suggestion.keywords.join('、')} 等能力。`
-          if (Array.isArray(lastExp.description)) {
-            if (!lastExp.description.some(d => d.includes(keywordDesc))) {
-              lastExp.description = [...lastExp.description, keywordDesc]
-            }
-          }
-        }
-        showSuccess(t.editor.messages.experienceUpdated)
-        break
-        
-      case 'projects':
-        // 在最近的项目中添加技术栈
-        if (updatedData.projects.length > 0) {
-          const lastProject = updatedData.projects[0]
-          const existingTech = lastProject.technologies.map(t => t.toLowerCase())
-          const newTech = suggestion.keywords.filter(
-            k => !existingTech.includes(k.toLowerCase())
-          )
-          lastProject.technologies = [...lastProject.technologies, ...newTech]
-        }
-        showSuccess(t.editor.messages.projectsUpdated)
-        break
+  const applyAISuggestionToResume = useCallback((
+    content: string,
+    section: string,
+    silent = false
+  ) => {
+    if (!content?.trim()) return
+
+    /**
+     * 清洗 AI 返回行内容
+     * 统一去除列表符号，避免脏数据入库
+     */
+    const normalizedLines = content
+      .split('\n')
+      .map((line) => line.replace(/^[\d\-\*\•\.\s]+/, '').trim())
+      .filter(Boolean)
+
+    const messageMap: Record<string, string> = {
+      summary: '个人简介已更新',
+      experience: '工作经历已更新',
+      skills: '专业技能已更新',
+      projects: '项目经验已更新',
+      education: '教育经历已更新'
     }
-    
-    setResumeData(updatedData)
-  }, [resumeData, showSuccess, t])
+
+    // summary 允许纯文本，其他模块要求至少有一行有效内容
+    if (section !== 'summary' && normalizedLines.length === 0) {
+      return
+    }
+    if (!messageMap[section]) {
+      return
+    }
+
+    setResumeData((prev) => {
+      const next: ResumeData = {
+        ...prev,
+        personalInfo: { ...prev.personalInfo },
+        experience: prev.experience.map((item) => ({ ...item, description: [...item.description] })),
+        education: prev.education.map((item) => ({ ...item })),
+        skills: prev.skills.map((item) => ({ ...item })),
+        projects: prev.projects.map((item) => ({ ...item, technologies: [...item.technologies], highlights: [...item.highlights] }))
+      }
+
+      switch (section) {
+        case 'summary':
+          next.personalInfo.summary = content.trim()
+          break
+        case 'experience': {
+          if (next.experience.length === 0) {
+            next.experience.push({
+              id: `exp-${Date.now()}`,
+              company: '待补充公司',
+              position: '待补充职位',
+              startDate: '',
+              endDate: '',
+              current: false,
+              description: normalizedLines
+            })
+          } else {
+            next.experience[0].description = normalizedLines
+          }
+          break
+        }
+        case 'skills': {
+          const existingSkillMap = new Map(next.skills.map((skill) => [skill.name.toLowerCase(), skill]))
+          normalizedLines.forEach((line, index) => {
+            const normalized = line.replace(/\(\d+%?\)/g, '').trim()
+            if (!normalized) return
+            const key = normalized.toLowerCase()
+            if (!existingSkillMap.has(key)) {
+              existingSkillMap.set(key, {
+                id: `skill-${Date.now()}-${index}`,
+                name: normalized,
+                level: 75,
+                category: '技术技能'
+              })
+            }
+          })
+          next.skills = Array.from(existingSkillMap.values())
+          break
+        }
+        case 'projects': {
+          if (next.projects.length === 0) {
+            next.projects.push({
+              id: `proj-${Date.now()}`,
+              name: 'AI优化项目',
+              description: normalizedLines[0],
+              technologies: [],
+              startDate: '',
+              endDate: '',
+              highlights: normalizedLines.slice(1).length > 0 ? normalizedLines.slice(1) : [normalizedLines[0]]
+            })
+          } else {
+            next.projects[0].description = normalizedLines[0]
+            next.projects[0].highlights = normalizedLines.slice(1).length > 0 ? normalizedLines.slice(1) : [normalizedLines[0]]
+          }
+          break
+        }
+        case 'education': {
+          if (next.education.length === 0) {
+            next.education.push({
+              id: `edu-${Date.now()}`,
+              school: normalizedLines[0] || '待补充学校',
+              degree: '待补充学位',
+              major: '待补充专业',
+              startDate: '',
+              endDate: '',
+              description: normalizedLines.slice(1).join('；')
+            })
+          } else {
+            next.education[0].description = normalizedLines.join('；')
+          }
+          break
+        }
+      }
+
+      return next
+    })
+
+    if (!silent && messageMap[section]) {
+      showSuccess(messageMap[section])
+    }
+  }, [showSuccess])
+
+  const handleApplyAISuggestion = useCallback((content: string, section: string) => {
+    applyAISuggestionToResume(content, section, false)
+  }, [applyAISuggestionToResume])
 
   /**
    * 应用所有 JD 建议
    * @param suggestions - JD 优化建议数组
    */
   const handleApplyAllJDSuggestions = useCallback((suggestions: JDSuggestion[]) => {
-    suggestions.forEach(suggestion => {
-      handleApplyJDSuggestion(suggestion)
+    let appliedCount = 0
+    suggestions.forEach((suggestion) => {
+      const content = (suggestion as JDSuggestion & { optimized?: string }).suggestedText || (suggestion as JDSuggestion & { optimized?: string }).optimized || ''
+      if (!content || !suggestion.section) return
+      applyAISuggestionToResume(content, suggestion.section, true)
+      appliedCount += 1
     })
-  }, [handleApplyJDSuggestion])
+
+    if (appliedCount > 0) {
+      showSuccess(`已应用 ${appliedCount} 条 JD 优化建议`)
+    }
+  }, [applyAISuggestionToResume, showSuccess])
+
+  /**
+   * 处理AI生成完成
+   * @param data - 生成的简历数据
+   */
+  const handleAIGenerateComplete = useCallback((data: Partial<ResumeData>) => {
+    setResumeData(prev => ({
+      ...prev,
+      ...data,
+      personalInfo: data.personalInfo ? { ...prev.personalInfo, ...data.personalInfo } : prev.personalInfo,
+      experience: data.experience ?? prev.experience,
+      education: data.education ?? prev.education,
+      skills: data.skills ?? prev.skills,
+      projects: data.projects ?? prev.projects
+    }))
+    showSuccess('AI 生成内容已应用到简历')
+  }, [showSuccess])
+
+  /**
+   * 处理 AI 配置保存
+   * 用于统一 AI 配置入口的成功反馈
+   */
+  const handleAIConfigSave = useCallback((_config: AIConfig) => {
+    showSuccess('AI 配置已保存')
+  }, [showSuccess])
 
   // 键盘快捷键配置 - 使用 useMemo 优化
   const shortcuts = useMemo(() => createEditorShortcuts({
@@ -932,11 +685,11 @@ export default function EditorPage() {
     onExport: () => setShowExportDialog(true),
     onTogglePreview: () => setIsPreviewMode(prev => !prev),
     onToggleFullscreen: () => setIsFullscreen(prev => !prev),
-    onOpenAI: () => setShowAIAssistant(true),
+    onOpenAI: () => setShowUnifiedAI(true),
   }), [saveNow])
 
   // 添加滑动手势支持
-  const { isSwiping, ...swipeHandlers } = useHorizontalSwipe(
+  const { ...swipeHandlers } = useHorizontalSwipe(
     () => {
       // 左滑：切换到预览模式（仅在移动端且当前为编辑模式时）
       if (typeof window !== 'undefined' && window.innerWidth < 1024 && !isPreviewMode) {
@@ -977,19 +730,18 @@ export default function EditorPage() {
               onTogglePreview={() => setIsPreviewMode(!isPreviewMode)}
               isFullscreen={isFullscreen}
               onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
-              onShowAIAssistant={() => handleOpenAIAssistant('summary', '')}
+              onShowAIAssistant={() => setShowUnifiedAI(true)}
+              onShowAIConfig={() => setShowAIConfig(true)}
               onShowShortcutHelp={() => setShowShortcutHelp(true)}
               onShowTemplateSelector={() => setShowTemplateSelector(true)}
               onShowExportDialog={() => setShowExportDialog(true)}
               onExport={handleExport}
               onSave={handleSave}
-              onShowJDMatcher={() => setShowJDMatcher(true)}
-              onShowStepwiseGenerator={() => setShowStepwiseGenerator(true)}
             />
 
             {/* 编辑器和预览区域 - 使用三栏布局 */}
             <div 
-              className="flex-1 flex flex-col mx-4 sm:mx-6 lg:mx-8 overflow-hidden min-h-0"
+              className="flex-1 flex flex-col mx-4 mt-3 sm:mx-6 lg:mx-8 overflow-hidden min-h-0"
               {...swipeHandlers}
             >
               {/* 移动端切换按钮 */}
@@ -1114,138 +866,25 @@ export default function EditorPage() {
 
           </main>
 
-        {/* AI助手弹窗 */}
-        {showAIAssistant && (
-          <AIAssistant
-            type={aiAssistantType}
-            currentContent={aiAssistantContent}
-            onClose={() => setShowAIAssistant(false)}
-            onApply={(suggestion) => {
-              // 根据AI助手类型更新对应的简历数据
-              const updatedData = { ...resumeData }
-              
-              switch (aiAssistantType) {
-                case 'summary':
-                  updatedData.personalInfo.summary = suggestion
-                  break
-                case 'experience':
-                  // 如果有选中的工作经历，更新其描述
-                  if (updatedData.experience.length > 0) {
-                    const lastExperience = updatedData.experience[updatedData.experience.length - 1]
-                    // 将建议内容按行分割为数组
-                    lastExperience.description = suggestion.split('\n').filter(line => line.trim())
-                  }
-                  break
-                case 'skills':
-                  // 智能解析技能建议并添加到技能列表
-                  const skillLines = suggestion.split('\n').filter(line => line.trim())
-                  const newSkills = skillLines.map((line, index) => {
-                    // 尝试解析技能名称和等级
-                    let skillName = line.trim()
-                    let skillLevel = 70 // 默认中等水平 (70%)
-                    let skillCategory = '技术技能'
-                    
-                    // 移除可能的序号或符号
-                    skillName = skillName.replace(/^[\d\-\*\•\.\s]+/, '').trim()
-                    
-                    // 根据关键词判断技能类别
-                    if (skillName.match(/(沟通|协调|领导|管理|团队|演讲|谈判)/)) {
-                      skillCategory = '软技能'
-                    } else if (skillName.match(/(语言|英语|日语|韩语|法语|德语)/)) {
-                      skillCategory = '语言技能'
-                    } else if (skillName.match(/(设计|UI|UX|Photoshop|Figma|Sketch)/)) {
-                      skillCategory = '设计技能'
-                    }
-                    
-                    // 根据描述词判断技能等级 (转换为数字百分比)
-                    if (skillName.match(/(精通|专家|资深|高级)/)) {
-                      skillLevel = 90 // 专家级别 (90%)
-                      skillName = skillName.replace(/(精通|专家|资深|高级)/, '').trim()
-                    } else if (skillName.match(/(熟练|良好)/)) {
-                      skillLevel = 80 // 高级水平 (80%)
-                      skillName = skillName.replace(/(熟练|良好)/, '').trim()
-                    } else if (skillName.match(/(了解|基础|初级)/)) {
-                      skillLevel = 50 // 初级水平 (50%)
-                      skillName = skillName.replace(/(了解|基础|初级)/, '').trim()
-                    }
-                    
-                    return {
-                      id: `skill-${Date.now()}-${index}`,
-                      name: skillName,
-                      level: skillLevel,
-                      category: skillCategory
-                    }
-                  }).filter(skill => skill.name.length > 0) // 过滤掉空技能名
-                  
-                  updatedData.skills = [...updatedData.skills, ...newSkills]
-                  break
-                case 'education':
-                  // 如果有教育经历，更新最后一个教育经历的描述
-                  if (updatedData.education.length > 0) {
-                    const lastEducation = updatedData.education[updatedData.education.length - 1]
-                    lastEducation.description = suggestion.trim()
-                  } else {
-                    // 如果没有教育经历，创建一个新的教育经历条目
-                    const newEducation = {
-                      id: `education-${Date.now()}`,
-                      school: '请填写学校名称',
-                      degree: '请填写学位',
-                      major: '请填写专业',
-                      startDate: '',
-                      endDate: '',
-                      description: suggestion.trim()
-                    }
-                    updatedData.education.push(newEducation)
-                  }
-                  break
-                case 'projects':
-                  // 智能处理项目经验AI建议
-                  if (updatedData.projects.length > 0) {
-                    const lastProject = updatedData.projects[updatedData.projects.length - 1]
-                    
-                    // 尝试解析项目描述和亮点
-                    const lines = suggestion.split('\n').filter(line => line.trim())
-                    const description = lines[0]?.trim() || suggestion.trim()
-                    
-                    // 提取项目亮点（通常以特定标识符开头）
-                    const highlights = lines.slice(1)
-                      .filter(line => line.match(/^[\-\*\•\d\.]/))
-                      .map(line => line.replace(/^[\-\*\•\d\.\s]+/, '').trim())
-                      .filter(highlight => highlight.length > 0)
-                    
-                    lastProject.description = description
-                    if (highlights.length > 0) {
-                      lastProject.highlights = [...(lastProject.highlights || []), ...highlights]
-                    }
-                  } else {
-                    // 如果没有项目经验，创建一个新的项目条目
-                    const lines = suggestion.split('\n').filter(line => line.trim())
-                    const description = lines[0]?.trim() || suggestion.trim()
-                    
-                    const highlights = lines.slice(1)
-                      .filter(line => line.match(/^[\-\*\•\d\.]/))
-                      .map(line => line.replace(/^[\-\*\•\d\.\s]+/, '').trim())
-                      .filter(highlight => highlight.length > 0)
-                    
-                    const newProject = {
-                      id: `project-${Date.now()}`,
-                      name: '请填写项目名称',
-                      description: description,
-                      technologies: [],
-                      startDate: '',
-                      endDate: '',
-                      highlights: highlights.length > 0 ? highlights : ['请填写项目亮点']
-                    }
-                    updatedData.projects.push(newProject)
-                  }
-                  break
-              }
-              
-              setResumeData(updatedData)
-              setShowAIAssistant(false)
-            }}
+        {/* 统一 AI 助手面板 */}
+        {showUnifiedAI && (
+          <UnifiedAIPanel
+            isOpen={showUnifiedAI}
+            onClose={() => setShowUnifiedAI(false)}
+            resumeData={resumeData}
+            onOpenAIConfig={() => setShowAIConfig(true)}
+            onApplySuggestion={handleApplyAISuggestion}
+            onApplyJDSuggestions={handleApplyAllJDSuggestions}
+            onGenerateComplete={handleAIGenerateComplete}
           />
         )}
+
+        {/* AI 配置弹窗 - 统一入口 */}
+        <AIConfigModal
+          isOpen={showAIConfig}
+          onClose={() => setShowAIConfig(false)}
+          onSave={handleAIConfigSave}
+        />
 
         {/* 快捷键帮助弹窗 */}
         {showShortcutHelp && (
@@ -1262,7 +901,7 @@ export default function EditorPage() {
               </div>
               <div className="p-5">
                 <div className="space-y-3">
-                  {getShortcutHelp().map((item: any, index: number) => (
+                  {getShortcutHelp().map((item, index) => (
                     <div key={index} className="flex items-center justify-between group p-2 hover:bg-white/50 rounded-lg transition-colors border border-transparent hover:border-gray-200">
                       <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors font-medium">{item.description}</span>
                       <kbd className="px-2.5 py-1 text-xs font-bold text-gray-600 bg-gray-50 border border-gray-200 rounded-lg transition-all font-mono">
@@ -1280,40 +919,6 @@ export default function EditorPage() {
               </div>
             </div>
           </div>
-        )}
-
-        {/* JD 匹配弹窗 - 仅在打开时渲染 */}
-        {showJDMatcher && (
-          <JDMatcherModal
-            isOpen={showJDMatcher}
-            onClose={() => setShowJDMatcher(false)}
-            resumeData={resumeData}
-            onApplySuggestion={handleApplyJDSuggestion}
-            onApplyAllSuggestions={handleApplyAllJDSuggestions}
-          />
-        )}
-
-        {/* AI 分步生成弹窗 - 仅在打开时渲染 */}
-        {showStepwiseGenerator && (
-          <StepwiseGeneratorModal
-            isOpen={showStepwiseGenerator}
-            onClose={() => setShowStepwiseGenerator(false)}
-            onComplete={(data) => {
-              // 合并生成的数据到简历
-              setResumeData(prev => ({
-                ...prev,
-                ...data,
-                personalInfo: data.personalInfo ? { ...prev.personalInfo, ...data.personalInfo } : prev.personalInfo
-              }))
-              showSuccess('AI 生成内容已应用到简历')
-            }}
-            initialUserInfo={{
-              name: resumeData.personalInfo.name,
-              targetPosition: resumeData.personalInfo.title,
-              industry: '',
-              experienceLevel: 'mid'
-            }}
-          />
         )}
 
         {/* 模板选择器 - 仅在打开时渲染 */}
@@ -1334,13 +939,7 @@ export default function EditorPage() {
           <ExportPreviewDialog
             isOpen={showExportDialog}
             onClose={() => setShowExportDialog(false)}
-            onExport={(format) => {
-              if (format === 'json') {
-                handleExportJSON()
-              } else {
-                handleExport(format)
-              }
-            }}
+            onExport={handleExportByFormat}
             resumeName={resumeData.personalInfo.name}
             onOptionsChange={(opts) => {
               setExportOptions(opts)

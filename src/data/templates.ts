@@ -19,8 +19,8 @@ export const resumeTemplates: TemplateStyle[] = [
     id: 'minimal-text',
     name: '经典居中',
     nameEn: 'Classic Centered',
-    description: '居中对齐，纯文字排版，ATS系统友好，适合投递',
-    descriptionEn: 'Centered alignment, pure text, ATS-friendly',
+    description: '经典衬线排版，兼顾 ATS 友好与视觉质感',
+    descriptionEn: 'Editorial serif layout with ATS-friendly structure',
     preview: '/templates/minimal-text.svg',
     category: 'general',
     subCategory: 'minimal',
@@ -28,21 +28,21 @@ export const resumeTemplates: TemplateStyle[] = [
     layoutType: 'top-bottom',
     tags: ['ATS友好', '居中对齐', '投递首选'],
     colors: {
-      primary: '#000000',
-      secondary: '#666666',
-      accent: '#333333',
-      text: '#000000',
+      primary: '#0f172a',
+      secondary: '#475569',
+      accent: '#b7791f',
+      text: '#0f172a',
       background: '#ffffff'
     },
     fonts: {
-      heading: '"Times New Roman", Georgia, serif',
-      body: '"Times New Roman", Georgia, serif',
-      size: { heading: '1.5rem', body: '0.875rem', small: '0.75rem' }
+      heading: '"Merriweather", "Times New Roman", Georgia, serif',
+      body: '"Merriweather", "Times New Roman", Georgia, serif',
+      size: { heading: '1.625rem', body: '0.9rem', small: '0.78rem' }
     },
     layout: {
-      margins: { top: '2.5rem', right: '2.5rem', bottom: '2.5rem', left: '2.5rem' },
+      margins: { top: '2.75rem', right: '2.75rem', bottom: '2.75rem', left: '2.75rem' },
       columns: { count: 1, gap: '1.5rem' },
-      spacing: { section: '1.5rem', item: '0.75rem', line: '1.5rem' }
+      spacing: { section: '1.75rem', item: '0.85rem', line: '1.6rem' }
     },
     components: {
       personalInfo: { layout: 'center', showAvatar: true, avatarPosition: 'center', avatarShape: 'circle', avatarBorderRadius: 50, defaultAvatar: '/avatars/img1.png' },
@@ -98,31 +98,31 @@ export const resumeTemplates: TemplateStyle[] = [
     id: 'timeline-layout',
     name: '现代时间轴',
     nameEn: 'Modern Timeline',
-    description: '垂直时间线，清晰展示职业发展轨迹',
-    descriptionEn: 'Vertical timeline, shows career progression clearly',
+    description: '标准时间轴结构，突出工作经历与项目成果，适合大多数岗位投递',
+    descriptionEn: 'Standard timeline structure focused on work history and project outcomes',
     preview: '/templates/timeline-layout.svg',
     category: 'general',
     subCategory: 'modern',
     isPremium: false,
     layoutType: 'top-bottom',
-    tags: ['时间线', '职业发展', '现代'],
+    tags: ['时间轴', '标准结构', '投递友好'],
     colors: {
-      primary: '#000000',
-      secondary: '#666666',
-      accent: '#999999',
-      text: '#000000',
+      primary: '#0f172a',
+      secondary: '#64748b',
+      accent: '#2563eb',
+      text: '#0f172a',
       background: '#ffffff',
-      timelineBg: '#e5e5e5'
+      timelineBg: '#d1d5db'
     },
     fonts: {
-      heading: 'Inter, -apple-system, sans-serif',
-      body: 'Inter, -apple-system, sans-serif',
+      heading: '"Inter", "PingFang SC", "Hiragino Sans GB", sans-serif',
+      body: '"Inter", "PingFang SC", "Hiragino Sans GB", sans-serif',
       size: { heading: '1.5rem', body: '0.875rem', small: '0.75rem' }
     },
     layout: {
-      margins: { top: '2.5rem', right: '2.5rem', bottom: '2.5rem', left: '2.5rem' },
+      margins: { top: '2.25rem', right: '2.25rem', bottom: '2.25rem', left: '2.25rem' },
       columns: { count: 1, gap: '2rem' },
-      spacing: { section: '2rem', item: '1.5rem', line: '1.5rem' }
+      spacing: { section: '1.8rem', item: '1.1rem', line: '1.5rem' }
     },
     components: {
       personalInfo: { layout: 'horizontal', showAvatar: true, avatarPosition: 'left', avatarShape: 'circle', avatarBorderRadius: 50, defaultAvatar: '/avatars/img1.png' },
@@ -137,8 +137,8 @@ export const resumeTemplates: TemplateStyle[] = [
     id: 'two-column-standard',
     name: '标准双栏',
     nameEn: 'Two Column',
-    description: '左侧灰色信息栏，右侧白色内容区，专业大气',
-    descriptionEn: 'Left gray sidebar, right white content',
+    description: '深色侧栏 + 浅色主区，信息层级清晰，视觉更现代',
+    descriptionEn: 'Dark sidebar with light content zone for modern hierarchy',
     preview: '/templates/two-column-standard.svg',
     category: 'general',
     subCategory: 'modern',
@@ -146,23 +146,23 @@ export const resumeTemplates: TemplateStyle[] = [
     layoutType: 'left-right',
     tags: ['双栏', '专业', '大气'],
     colors: {
-      primary: '#000000',
-      secondary: '#666666',
-      accent: '#333333',
-      text: '#000000',
-      background: '#ffffff',
-      sidebarBg: '#f5f5f5'
+      primary: '#0f172a',
+      secondary: '#64748b',
+      accent: '#0ea5a4',
+      text: '#1e293b',
+      background: '#f8fafc',
+      sidebarBg: '#10233f'
     },
     fonts: {
-      heading: 'Inter, -apple-system, sans-serif',
-      body: 'Inter, -apple-system, sans-serif',
-      size: { heading: '1.5rem', body: '0.875rem', small: '0.75rem' }
+      heading: '"Manrope", "PingFang SC", "Hiragino Sans GB", sans-serif',
+      body: '"Manrope", "PingFang SC", "Hiragino Sans GB", sans-serif',
+      size: { heading: '1.5rem', body: '0.875rem', small: '0.76rem' }
     },
     layout: {
       margins: { top: '0', right: '0', bottom: '0', left: '0' },
       columns: { count: 2, gap: '0', leftWidth: '32%', rightWidth: '68%' },
-      spacing: { section: '1.75rem', item: '1rem', line: '1.3rem' },
-      padding: 40
+      spacing: { section: '1.8rem', item: '1rem', line: '1.35rem' },
+      padding: 36
     },
     components: {
       personalInfo: { layout: 'vertical', showAvatar: true, avatarPosition: 'center', avatarShape: 'circle', avatarBorderRadius: 50, defaultAvatar: '/avatars/img1.png' },
@@ -254,35 +254,35 @@ export const resumeTemplates: TemplateStyle[] = [
     id: 'card-layout',
     name: '创意卡片',
     nameEn: 'Creative Card',
-    description: '卡片式设计，模块化布局，视觉层次分明',
-    descriptionEn: 'Card-based design, modular layout, clear visual hierarchy',
+    description: '标准卡片分区，信息清晰，适合互联网与通用岗位',
+    descriptionEn: 'Standard card sections with clear hierarchy for general applications',
     preview: '/templates/card-layout.svg',
     category: 'general',
     subCategory: 'creative',
     isPremium: false,
     layoutType: 'top-bottom',
-    tags: ['卡片', '创意', '视觉突出'],
+    tags: ['卡片分区', '信息清晰', '通用岗位'],
     colors: {
-      primary: '#000000',
-      secondary: '#666666',
-      accent: '#333333',
-      text: '#000000',
+      primary: '#0f172a',
+      secondary: '#64748b',
+      accent: '#0f766e',
+      text: '#0f172a',
       background: '#ffffff',
-      cardBg: '#f8f9fa',
-      cardBorder: '#e9ecef'
+      cardBg: '#f8fafc',
+      cardBorder: '#cbd5e1'
     },
     fonts: {
-      heading: 'Inter, -apple-system, sans-serif',
-      body: 'Inter, -apple-system, sans-serif',
+      heading: '"Inter", "PingFang SC", "Hiragino Sans GB", sans-serif',
+      body: '"Inter", "PingFang SC", "Hiragino Sans GB", sans-serif',
       size: { heading: '1.5rem', body: '0.875rem', small: '0.75rem' }
     },
     layout: {
       margins: { top: '2rem', right: '2rem', bottom: '2rem', left: '2rem' },
       columns: { count: 1, gap: '1.5rem' },
-      spacing: { section: '1.5rem', item: '1rem', line: '1.5rem' }
+      spacing: { section: '1.5rem', item: '0.95rem', line: '1.5rem' }
     },
     components: {
-      personalInfo: { layout: 'horizontal', showAvatar: true, avatarPosition: 'left', avatarShape: 'square', avatarBorderRadius: 12, defaultAvatar: '/avatars/img1.png' },
+      personalInfo: { layout: 'horizontal', showAvatar: true, avatarPosition: 'left', avatarShape: 'square', avatarBorderRadius: 10, defaultAvatar: '/avatars/img1.png' },
       sectionTitle: { style: 'background', alignment: 'left' },
       listItem: { bulletStyle: 'none', indentation: '0' },
       dateFormat: { format: 'YYYY.MM', position: 'right' },
@@ -413,31 +413,31 @@ export const resumeTemplates: TemplateStyle[] = [
     id: 'banner-layout',
     name: '简历横幅',
     nameEn: 'Banner Layout',
-    description: '顶部横幅设计，个人信息突出，专业大气',
-    descriptionEn: 'Top banner design, highlights personal info, professional',
+    description: '顶部信息栏 + 标准正文分区，简洁专业，适合在线投递',
+    descriptionEn: 'Top info header with standard sections, clean and professional',
     preview: '/templates/banner-layout.svg',
     category: 'general',
     subCategory: 'modern',
     isPremium: false,
     layoutType: 'top-bottom',
-    tags: ['横幅', '突出', '专业'],
+    tags: ['清晰头部', '标准结构', 'ATS友好'],
     colors: {
-      primary: '#000000',
-      secondary: '#666666',
-      accent: '#333333',
-      text: '#000000',
+      primary: '#0f172a',
+      secondary: '#64748b',
+      accent: '#2563eb',
+      text: '#0f172a',
       background: '#ffffff',
-      bannerBg: '#f8f9fa'
+      bannerBg: '#f1f5f9'
     },
     fonts: {
-      heading: 'Inter, -apple-system, sans-serif',
-      body: 'Inter, -apple-system, sans-serif',
-      size: { heading: '1.75rem', body: '0.875rem', small: '0.75rem' }
+      heading: '"Inter", "PingFang SC", "Hiragino Sans GB", sans-serif',
+      body: '"Inter", "PingFang SC", "Hiragino Sans GB", sans-serif',
+      size: { heading: '1.68rem', body: '0.88rem', small: '0.75rem' }
     },
     layout: {
       margins: { top: '0', right: '2rem', bottom: '2rem', left: '2rem' },
       columns: { count: 1, gap: '1.5rem' },
-      spacing: { section: '1.75rem', item: '1rem', line: '1.5rem' }
+      spacing: { section: '1.75rem', item: '0.95rem', line: '1.5rem' }
     },
     components: {
       personalInfo: { layout: 'banner', showAvatar: true, avatarPosition: 'left', avatarShape: 'circle', avatarBorderRadius: 50, defaultAvatar: '/avatars/img1.png' },
@@ -532,7 +532,7 @@ export const templateCategories: TemplateCategory[] = careerCategories.map(caree
  * 获取默认模板
  */
 export const getDefaultTemplate = (): TemplateStyle => {
-  return resumeTemplates.find(t => t.id === 'minimal-text') || resumeTemplates[0]
+  return resumeTemplates.find(t => t.id === 'two-column-standard') || resumeTemplates[0]
 }
 
 /**
@@ -560,10 +560,10 @@ export const getPremiumTemplates = (): TemplateStyle[] => {
  * 流行模板ID列表
  */
 export const popularTemplateIds = [
+  'two-column-standard',
   'minimal-text',
   'table-layout',
   'timeline-layout',
-  'two-column-standard',
   'divider-layout',
   'compact-layout',
   'card-layout',
