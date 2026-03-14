@@ -312,7 +312,7 @@ export const resumeTemplates: TemplateStyle[] = [
     description: '网格式排版，适合展示多项技能和项目',
     descriptionEn: 'Grid-based layout, ideal for showcasing skills and projects',
     preview: '/templates/grid-layout.svg',
-    category: 'general',
+    category: 'designer',
     subCategory: 'modern',
     isPremium: false,
     layoutType: 'top-bottom',

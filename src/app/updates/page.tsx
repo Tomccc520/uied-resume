@@ -419,7 +419,7 @@ export default function UpdatesPage() {
                             <ul className="space-y-2">
                               {log.breaking.map((change, i) => (
                                 <li key={i} className="flex items-start gap-2 text-red-700">
-                                  <span className="text-red-600">⚠️</span>
+                                  <span className="text-red-600">!</span>
                                   <span>{change}</span>
                                 </li>
                               ))}
@@ -471,4 +471,3 @@ export default function UpdatesPage() {
     </div>
   )
 }
-

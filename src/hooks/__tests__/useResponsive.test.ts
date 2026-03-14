@@ -2,8 +2,8 @@
  * useResponsive Hook 单元测试
  */
 
-import { renderHook, act } from '@testing-library/react';
-import { useResponsive, useIsMobile, useMediaQuery, BREAKPOINTS } from '../useResponsive';
+import { renderHook } from '@testing-library/react';
+import { useResponsive, useIsMobile, useMediaQuery } from '../useResponsive';
 
 // Mock window.matchMedia
 const mockMatchMedia = (matches: boolean) => {

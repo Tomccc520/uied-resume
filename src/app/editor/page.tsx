@@ -476,7 +476,7 @@ export default function EditorPage() {
     setResumeData(prevData => {
       // 确保至少有基本的个人信息结构
       if (!prevData.personalInfo || !prevData.personalInfo.name) {
-        logEditorDebug('⚠️ 检测到简历数据不完整，使用默认数据')
+        logEditorDebug('[编辑器提示] 检测到简历数据不完整，使用默认数据')
         return {
           personalInfo: {
             name: '请填写姓名',

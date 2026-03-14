@@ -5,8 +5,24 @@
 
 import { PerformanceMonitor, initPerformanceMonitor, getPerformanceMetrics } from '../performanceMonitor';
 
-// Mock Performance API
-const mockPerformance = {
+type MockPerformance = {
+  timing: {
+    navigationStart: number;
+    loadEventEnd: number;
+    domContentLoadedEventEnd: number;
+    responseEnd: number;
+    requestStart: number;
+  };
+  mark: jest.Mock;
+  measure: jest.Mock;
+  getEntriesByName: jest.Mock;
+};
+
+/**
+ * 创建可重置的 Performance API mock
+ * 每个用例独立生成，避免历史调用污染断言。
+ */
+const createMockPerformance = (): MockPerformance => ({
   timing: {
     navigationStart: 0,
     loadEventEnd: 1000,
@@ -17,17 +33,33 @@ const mockPerformance = {
   mark: jest.fn(),
   measure: jest.fn(),
   getEntriesByName: jest.fn(() => [{ duration: 100 }]),
-};
+});
 
 describe('PerformanceMonitor', () => {
+  let mockPerformance: MockPerformance;
+  const originalPerformance = window.performance;
+
   beforeEach(() => {
     // Reset singleton instance
     (PerformanceMonitor as any).instance = null;
-    
-    // Mock window.performance
-    global.window = {
-      performance: mockPerformance,
-    } as any;
+
+    mockPerformance = createMockPerformance();
+
+    // 在 jsdom 中显式覆盖 window.performance，确保 mark/measure 调用可被拦截
+    Object.defineProperty(window, 'performance', {
+      configurable: true,
+      writable: true,
+      value: mockPerformance,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(window, 'performance', {
+      configurable: true,
+      writable: true,
+      value: originalPerformance,
+    });
+    jest.clearAllMocks();
   });
 
   describe('getInstance', () => {

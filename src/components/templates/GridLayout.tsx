@@ -100,9 +100,9 @@ export const GridLayout: React.FC<TemplateProps> = ({
           className="flex flex-wrap justify-center gap-4 text-sm"
           style={{ color: colors.secondary || '#666666', lineHeight }}
         >
-          {personalInfo.email && <span>📧 {personalInfo.email}</span>}
-          {personalInfo.phone && <span>📱 {personalInfo.phone}</span>}
-          {personalInfo.location && <span>📍 {personalInfo.location}</span>}
+          {personalInfo.email && <span>邮箱: {personalInfo.email}</span>}
+          {personalInfo.phone && <span>电话: {personalInfo.phone}</span>}
+          {personalInfo.location && <span>地点: {personalInfo.location}</span>}
         </div>
         {personalInfo.summary && (
           <p className="mt-4 max-w-2xl leading-relaxed" style={{ color: colors.text, lineHeight }}>
@@ -266,4 +266,3 @@ export const GridLayout: React.FC<TemplateProps> = ({
     </div>
   )
 }
-

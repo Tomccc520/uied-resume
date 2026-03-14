@@ -85,7 +85,7 @@ export function FinalReviewPanel({
               <Check className="w-4 h-4 text-white" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-              {t.stepwise?.finalReview?.title || '✨ 最终审核'}
+              {t.stepwise?.finalReview?.title || '最终审核'}
             </h3>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-300 ml-8">
@@ -174,7 +174,7 @@ export function FinalReviewPanel({
                             ? 'bg-blue-500 text-white'
                             : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
                         }`}>
-                          {step.isSelected ? '✓ 已选' : '未选'}
+                          {step.isSelected ? '已选' : '未选'}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -250,7 +250,7 @@ export function FinalReviewPanel({
                               value={optimizePrompt}
                               onChange={(e) => setOptimizePrompt(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && handleOptimize(index)}
-                              placeholder={locale === 'zh' ? '💡 输入自定义优化要求...' : '💡 Enter custom optimization...'}
+                              placeholder={locale === 'zh' ? '输入自定义优化要求...' : 'Enter custom optimization...'}
                               className="flex-1 px-4 py-2.5 text-sm bg-white dark:bg-gray-800 border-2 border-purple-200 dark:border-purple-700 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                             />
                             <button
@@ -296,7 +296,7 @@ export function FinalReviewPanel({
         </div>
         {selectedCount === 0 && (
           <p className="text-xs text-center text-gray-500 dark:text-gray-400 mt-2">
-            {locale === 'zh' ? '💡 请至少选择一个模块' : '💡 Please select at least one module'}
+            {locale === 'zh' ? '请至少选择一个模块' : 'Please select at least one module'}
           </p>
         )}
       </div>

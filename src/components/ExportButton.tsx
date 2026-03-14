@@ -85,10 +85,10 @@ export default function ExportButton({ className = '', onExport }: ExportButtonP
       throw new Error('找不到简历预览元素 #resume-preview')
     }
 
-    logExportDebug('✅ 找到元素:', element)
-    logExportDebug('📏 元素尺寸:', element.getBoundingClientRect())
-    logExportDebug('📝 内容长度:', element.innerHTML.length)
-    logExportDebug('👶 子元素数量:', element.children.length)
+    logExportDebug('[导出调试] 找到元素:', element)
+    logExportDebug('[导出调试] 元素尺寸:', element.getBoundingClientRect())
+    logExportDebug('[导出调试] 内容长度:', element.innerHTML.length)
+    logExportDebug('[导出调试] 子元素数量:', element.children.length)
 
     // 检查元素是否真的有内容
     if (element.innerHTML.length === 0) {
@@ -109,7 +109,7 @@ export default function ExportButton({ className = '', onExport }: ExportButtonP
   const handleExport = useCallback(async (format: 'pdf' | 'png' | 'jpg') => {
     if (isExporting) return
 
-    logExportDebug('🚀 开始导出:', format)
+    logExportDebug('[导出调试] 开始导出:', format)
 
     setIsExporting(format)
     setExportStatus(null)
@@ -122,7 +122,7 @@ export default function ExportButton({ className = '', onExport }: ExportButtonP
         message: `${format.toUpperCase()} ${t.editor.toolbar.exportSuccess}`
       })
     } catch (error) {
-      console.error('❌ Export failed:', error)
+      console.error('[导出错误] Export failed:', error)
       setExportStatus({
         type: 'error',
         message: t.editor.toolbar.exportFailed

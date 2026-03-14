@@ -13,8 +13,8 @@ import { Locale } from '@/types/i18n'
 
 // 支持的语言列表
 const SUPPORTED_LANGUAGES = [
-  { code: 'zh' as Locale, name: '中文', flag: '🇨🇳' },
-  { code: 'en' as Locale, name: 'English', flag: '🇺🇸' }
+  { code: 'zh' as Locale, name: '中文', short: 'ZH' },
+  { code: 'en' as Locale, name: 'English', short: 'EN' }
 ]
 
 /**
@@ -44,7 +44,7 @@ export default function LanguageSwitcher() {
         className="btn btn-outline btn-md flex items-center space-x-2"
         aria-label="选择语言"
       >
-        <span className="text-lg">{currentLangConfig?.flag}</span>
+        <span className="text-xs font-semibold text-gray-500">{currentLangConfig?.short}</span>
         <span>{currentLangConfig?.name}</span>
         <svg
           className={`icon icon-sm transition-transform ${isOpen ? 'rotate-180' : ''}`}
@@ -78,7 +78,7 @@ export default function LanguageSwitcher() {
                       : 'btn-ghost'
                   } btn-sm w-full justify-start space-x-3`}
                 >
-                  <span className="text-lg">{language.flag}</span>
+                  <span className="text-xs font-semibold text-gray-500">{language.short}</span>
                   <span className="font-medium">{language.name}</span>
                   {locale === language.code && (
                     <svg

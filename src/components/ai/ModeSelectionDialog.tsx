@@ -94,7 +94,7 @@ export function ModeSelectionDialog({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                      {t.stepwise?.modeSelection?.quickMode || '⚡ 快速模式'}
+                      {t.stepwise?.modeSelection?.quickMode || '快速模式'}
                     </h3>
                     {defaultMode === 'quick' && (
                       <span className="px-2.5 py-1 text-xs font-medium bg-blue-500 text-white rounded-full shadow-sm">
@@ -107,13 +107,13 @@ export function ModeSelectionDialog({
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-md">
-                      ⏱️ 节省时间
+                      节省时间
                     </span>
                     <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-md">
-                      🎯 适合新手
+                      适合新手
                     </span>
                     <span className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 rounded-md">
-                      ✨ 一键完成
+                      一键完成
                     </span>
                   </div>
                 </div>
@@ -144,7 +144,7 @@ export function ModeSelectionDialog({
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                      {t.stepwise?.modeSelection?.stepByStepMode || '📝 逐步模式'}
+                      {t.stepwise?.modeSelection?.stepByStepMode || '逐步模式'}
                     </h3>
                     {defaultMode === 'stepByStep' && (
                       <span className="px-2.5 py-1 text-xs font-medium bg-green-500 text-white rounded-full shadow-sm">
@@ -157,13 +157,13 @@ export function ModeSelectionDialog({
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-md">
-                      🎨 精细控制
+                      精细控制
                     </span>
                     <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-md">
-                      ✏️ 随时编辑
+                      随时编辑
                     </span>
                     <span className="px-2 py-1 text-xs bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 rounded-md">
-                      🔄 可重新生成
+                      可重新生成
                     </span>
                   </div>
                 </div>
@@ -179,7 +179,7 @@ export function ModeSelectionDialog({
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  💡 {locale === 'zh' ? '温馨提示' : 'Tip'}
+                  {locale === 'zh' ? '温馨提示' : 'Tip'}
                 </p>
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                   {t.stepwise?.modeSelection?.hint || '选择后可在生成过程中随时切换到快速模式，两种模式可以灵活切换'}
