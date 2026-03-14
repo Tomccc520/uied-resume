@@ -36,13 +36,21 @@ export const BannerLayout: React.FC<TemplateProps> = ({
 
   const fontFamilyStyle = fontFamily || '"Inter", "PingFang SC", "Hiragino Sans GB", sans-serif'
   const pagePadding = styleConfig.layout?.padding || 32
-  const sectionGap = spacing?.section || 28
+  const sectionGap = Math.min(Math.max(spacing?.section || 24, 22), 28)
   const headingColor = colors.primary || '#1f2937'
   const textColor = colors.text || '#1f2937'
   const mutedColor = colors.secondary || '#6b7280'
   const accentColor = colors.accent || '#2563eb'
   const headerBackground = (colors as Record<string, string>).bannerBg || '#f8fafc'
   const borderColor = '#e2e8f0'
+  const baseContentSize = fontSize?.content || 14
+  const bodyLineHeight = 1.62
+  const summaryLineHeight = 1.68
+  const nameSize = Math.round(baseContentSize * 2.2)
+  const roleSize = Math.round(baseContentSize * 1.28)
+  const sectionTitleSize = Math.round(baseContentSize * 1.02)
+  const itemTitleSize = Math.round(baseContentSize * 1.12)
+  const metaSize = Math.round(baseContentSize * 0.86)
 
   /**
    * 格式化日期文本
@@ -66,7 +74,7 @@ export const BannerLayout: React.FC<TemplateProps> = ({
     <div className="mb-3 flex items-end justify-between border-b pb-2" style={{ borderColor }}>
       <h2
         className="text-sm font-semibold uppercase tracking-[0.14em]"
-        style={{ color: headingColor }}
+        style={{ color: headingColor, fontSize: `${sectionTitleSize}px` }}
       >
         {title}
       </h2>
@@ -102,8 +110,8 @@ export const BannerLayout: React.FC<TemplateProps> = ({
       style={{
         fontFamily: fontFamilyStyle,
         color: textColor,
-        fontSize: `${fontSize?.content || 14}px`,
-        lineHeight: 1.6,
+        fontSize: `${baseContentSize}px`,
+        lineHeight: bodyLineHeight,
         padding: `${pagePadding}px`,
         borderColor
       }}
@@ -136,7 +144,7 @@ export const BannerLayout: React.FC<TemplateProps> = ({
             <h1
               className="font-semibold tracking-[0.01em]"
               style={{
-                fontSize: `${fontSize?.name || 32}px`,
+                fontSize: `${nameSize}px`,
                 color: headingColor
               }}
             >
@@ -145,21 +153,21 @@ export const BannerLayout: React.FC<TemplateProps> = ({
             <p
               className="mt-1 font-medium"
               style={{
-                fontSize: `${fontSize?.title || 18}px`,
+                fontSize: `${roleSize}px`,
                 color: mutedColor
               }}
             >
               {personalInfo.title}
             </p>
             {getContactSummary() && (
-              <p className="mt-2 text-xs sm:text-sm" style={{ color: mutedColor }}>
+              <p className="mt-2" style={{ color: mutedColor, fontSize: `${metaSize}px` }}>
                 {getContactSummary()}
               </p>
             )}
           </div>
         </div>
         {personalInfo.summary && (
-          <p className="mt-4 whitespace-pre-line text-sm leading-7" style={{ color: textColor }}>
+          <p className="mt-4 whitespace-pre-line" style={{ color: textColor, lineHeight: summaryLineHeight }}>
             {personalInfo.summary}
           </p>
         )}
@@ -182,13 +190,13 @@ export const BannerLayout: React.FC<TemplateProps> = ({
                   <h3
                     className="font-semibold"
                     style={{
-                      fontSize: `${fontSize?.title || 16}px`,
+                      fontSize: `${itemTitleSize}px`,
                       color: headingColor
                     }}
                   >
                     {exp.position}
                   </h3>
-                  <span className="text-xs font-medium" style={{ color: mutedColor }}>
+                  <span className="font-medium" style={{ color: mutedColor, fontSize: `${metaSize}px` }}>
                     {formatPeriod(exp.startDate, exp.endDate, exp.current)}
                   </span>
                 </div>
@@ -228,13 +236,13 @@ export const BannerLayout: React.FC<TemplateProps> = ({
                   <h3
                     className="font-semibold"
                     style={{
-                      fontSize: `${fontSize?.title || 16}px`,
+                      fontSize: `${itemTitleSize}px`,
                       color: headingColor
                     }}
                   >
                     {project.name}
                   </h3>
-                  <span className="text-xs font-medium" style={{ color: mutedColor }}>
+                  <span className="font-medium" style={{ color: mutedColor, fontSize: `${metaSize}px` }}>
                     {formatDateStr(project.startDate)} - {formatDateStr(project.endDate)}
                   </span>
                 </div>
@@ -271,7 +279,7 @@ export const BannerLayout: React.FC<TemplateProps> = ({
                   <h3 className="font-semibold" style={{ color: headingColor }}>
                     {edu.school}
                   </h3>
-                  <span className="text-xs font-medium" style={{ color: mutedColor }}>
+                  <span className="font-medium" style={{ color: mutedColor, fontSize: `${metaSize}px` }}>
                     {formatDateStr(edu.startDate)} - {formatDateStr(edu.endDate)}
                   </span>
                 </div>
