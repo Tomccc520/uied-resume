@@ -50,8 +50,13 @@ import { useBatchSelection } from '@/hooks/useBatchSelection'
 import { LoadingOverlay } from '@/components/feedback/LoadingOverlay'
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog'
 import { useEditorExportFlow } from '@/hooks/useEditorExportFlow'
-
-type AISection = 'summary' | 'experience' | 'skills' | 'education' | 'projects'
+import {
+  AISection,
+  applyAISuggestionToResumeData,
+  mergeGeneratedResumeData,
+  normalizePreviewSectionToEditor,
+  normalizeSectionToAISection
+} from '@/domain/editor/resumeAIActions'
 
 // 懒加载非关键组件 - 优化初始加载性能 (Requirements: 1.5)
 const ResumeEditor = dynamic(() => import('@/components/ResumeEditor'), {
@@ -508,136 +513,17 @@ export default function EditorPage() {
   }, [logEditorDebug])
 
   /**
-   * 应用AI优化建议
-   * @param content - 优化后的内容
-   * @param section - 要更新的部分
+   * 应用单条 AI 建议
+   * 通过领域层 action 统一处理文案解析和数据写回。
    */
-  const applyAISuggestionToResume = useCallback((
-    content: string,
-    section: string,
-    silent = false
-  ) => {
-    if (!content?.trim()) return
-
-    /**
-     * 清洗 AI 返回行内容
-     * 统一去除列表符号，避免脏数据入库
-     */
-    const normalizedLines = content
-      .split('\n')
-      .map((line) => line.replace(/^[\d\-\*\•\.\s]+/, '').trim())
-      .filter(Boolean)
-
-    const messageMap: Record<string, string> = {
-      summary: '个人简介已更新',
-      experience: '工作经历已更新',
-      skills: '专业技能已更新',
-      projects: '项目经验已更新',
-      education: '教育经历已更新'
-    }
-
-    // summary 允许纯文本，其他模块要求至少有一行有效内容
-    if (section !== 'summary' && normalizedLines.length === 0) {
-      return
-    }
-    if (!messageMap[section]) {
-      return
-    }
-
-    setResumeData((prev) => {
-      const next: ResumeData = {
-        ...prev,
-        personalInfo: { ...prev.personalInfo },
-        experience: prev.experience.map((item) => ({ ...item, description: [...item.description] })),
-        education: prev.education.map((item) => ({ ...item })),
-        skills: prev.skills.map((item) => ({ ...item })),
-        projects: prev.projects.map((item) => ({ ...item, technologies: [...item.technologies], highlights: [...item.highlights] }))
-      }
-
-      switch (section) {
-        case 'summary':
-          next.personalInfo.summary = content.trim()
-          break
-        case 'experience': {
-          if (next.experience.length === 0) {
-            next.experience.push({
-              id: `exp-${Date.now()}`,
-              company: '待补充公司',
-              position: '待补充职位',
-              startDate: '',
-              endDate: '',
-              current: false,
-              description: normalizedLines
-            })
-          } else {
-            next.experience[0].description = normalizedLines
-          }
-          break
-        }
-        case 'skills': {
-          const existingSkillMap = new Map(next.skills.map((skill) => [skill.name.toLowerCase(), skill]))
-          normalizedLines.forEach((line, index) => {
-            const normalized = line.replace(/\(\d+%?\)/g, '').trim()
-            if (!normalized) return
-            const key = normalized.toLowerCase()
-            if (!existingSkillMap.has(key)) {
-              existingSkillMap.set(key, {
-                id: `skill-${Date.now()}-${index}`,
-                name: normalized,
-                level: 75,
-                category: '技术技能'
-              })
-            }
-          })
-          next.skills = Array.from(existingSkillMap.values())
-          break
-        }
-        case 'projects': {
-          if (next.projects.length === 0) {
-            next.projects.push({
-              id: `proj-${Date.now()}`,
-              name: 'AI优化项目',
-              description: normalizedLines[0],
-              technologies: [],
-              startDate: '',
-              endDate: '',
-              highlights: normalizedLines.slice(1).length > 0 ? normalizedLines.slice(1) : [normalizedLines[0]]
-            })
-          } else {
-            next.projects[0].description = normalizedLines[0]
-            next.projects[0].highlights = normalizedLines.slice(1).length > 0 ? normalizedLines.slice(1) : [normalizedLines[0]]
-          }
-          break
-        }
-        case 'education': {
-          if (next.education.length === 0) {
-            next.education.push({
-              id: `edu-${Date.now()}`,
-              school: normalizedLines[0] || '待补充学校',
-              degree: '待补充学位',
-              major: '待补充专业',
-              startDate: '',
-              endDate: '',
-              description: normalizedLines.slice(1).join('；')
-            })
-          } else {
-            next.education[0].description = normalizedLines.join('；')
-          }
-          break
-        }
-      }
-
-      return next
-    })
-
-    if (!silent && messageMap[section]) {
-      showSuccess(messageMap[section])
-    }
-  }, [showSuccess])
-
   const handleApplyAISuggestion = useCallback((content: string, section: string) => {
-    applyAISuggestionToResume(content, section, false)
-  }, [applyAISuggestionToResume])
+    const result = applyAISuggestionToResumeData(resumeData, content, section)
+    if (!result.changed) {
+      return
+    }
+    setResumeData(result.nextResumeData)
+    showSuccess(result.message)
+  }, [resumeData, showSuccess])
 
   /**
    * 应用所有 JD 建议
@@ -645,34 +531,31 @@ export default function EditorPage() {
    */
   const handleApplyAllJDSuggestions = useCallback((suggestions: JDSuggestion[]) => {
     let appliedCount = 0
+    let nextResumeData = resumeData
+
     suggestions.forEach((suggestion) => {
       const content = (suggestion as JDSuggestion & { optimized?: string }).suggestedText || (suggestion as JDSuggestion & { optimized?: string }).optimized || ''
       if (!content || !suggestion.section) return
-      applyAISuggestionToResume(content, suggestion.section, true)
+      const result = applyAISuggestionToResumeData(nextResumeData, content, suggestion.section)
+      if (!result.changed) return
+      nextResumeData = result.nextResumeData
       appliedCount += 1
     })
 
     if (appliedCount > 0) {
+      setResumeData(nextResumeData)
       showSuccess(`已应用 ${appliedCount} 条 JD 优化建议`)
     }
-  }, [applyAISuggestionToResume, showSuccess])
+  }, [resumeData, showSuccess])
 
   /**
    * 处理AI生成完成
    * @param data - 生成的简历数据
    */
   const handleAIGenerateComplete = useCallback((data: Partial<ResumeData>) => {
-    setResumeData(prev => ({
-      ...prev,
-      ...data,
-      personalInfo: data.personalInfo ? { ...prev.personalInfo, ...data.personalInfo } : prev.personalInfo,
-      experience: data.experience ?? prev.experience,
-      education: data.education ?? prev.education,
-      skills: data.skills ?? prev.skills,
-      projects: data.projects ?? prev.projects
-    }))
+    setResumeData(mergeGeneratedResumeData(resumeData, data))
     showSuccess('AI 生成内容已应用到简历')
-  }, [showSuccess])
+  }, [resumeData, showSuccess])
 
   /**
    * 处理 AI 配置保存
@@ -687,16 +570,8 @@ export default function EditorPage() {
    * 点击预览中的模块后，自动定位到对应编辑模块，并在小屏切换到编辑视图。
    */
   const handlePreviewSectionClick = useCallback((section: string) => {
-    const normalizedMap: Record<string, string> = {
-      personalInfo: 'personal',
-      skill: 'skills',
-      project: 'projects',
-      experiences: 'experience',
-      educations: 'education'
-    }
-    const normalizedSection = normalizedMap[section] || section
-    const validSections = new Set(['personal', 'experience', 'education', 'skills', 'projects'])
-    if (!validSections.has(normalizedSection)) {
+    const normalizedSection = normalizePreviewSectionToEditor(section)
+    if (!normalizedSection) {
       return
     }
 
@@ -720,20 +595,7 @@ export default function EditorPage() {
    * 确保来自编辑器、预览区或快捷入口的 section 都能映射到统一 AI 模式。
    */
   const normalizeAISection = useCallback((section: string): AISection => {
-    const normalizedMap: Record<string, AISection> = {
-      personal: 'summary',
-      personalInfo: 'summary',
-      summary: 'summary',
-      experience: 'experience',
-      experiences: 'experience',
-      skills: 'skills',
-      skill: 'skills',
-      education: 'education',
-      educations: 'education',
-      projects: 'projects',
-      project: 'projects'
-    }
-    return normalizedMap[section] || 'summary'
+    return normalizeSectionToAISection(section)
   }, [])
 
   /**
