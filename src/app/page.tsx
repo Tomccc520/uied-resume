@@ -14,14 +14,18 @@ import {
   ArrowRight,
   ArrowUp,
   Bot,
+  Building2,
   CheckCircle2,
   ChevronDown,
   FileCheck2,
+  GraduationCap,
   LayoutTemplate,
   Shield,
   Sparkles,
   Star,
+  Target,
   Wand2,
+  Workflow,
   Zap
 } from 'lucide-react'
 import Header from '@/components/Header'
@@ -154,6 +158,68 @@ export default function HomePage() {
   }, [locale])
 
   /**
+   * 招聘场景入口
+   * 提供面向真实投递场景的快捷入口，帮助用户直接进入对应编辑路径。
+   */
+  const workflowEntries = useMemo(() => {
+    if (locale === 'en') {
+      return [
+        {
+          title: 'Campus Application',
+          desc: 'Start from education and projects, then complete skills and summary.',
+          href: '/editor?focus=education',
+          icon: GraduationCap
+        },
+        {
+          title: 'Engineering Role',
+          desc: 'Jump to experience and skills first, keep technical highlights concise.',
+          href: '/editor?focus=experience',
+          icon: Workflow
+        },
+        {
+          title: 'Product / Operation',
+          desc: 'Build project impact first, then polish wording with AI panel.',
+          href: '/editor?focus=projects&panel=ai',
+          icon: Target
+        },
+        {
+          title: 'Universal Delivery',
+          desc: 'Open template panel directly and choose ATS-friendly layout first.',
+          href: '/editor?panel=template',
+          icon: Building2
+        }
+      ]
+    }
+
+    return [
+      {
+        title: '校招应届投递',
+        desc: '优先完善教育、项目与技能模块，再补个人总结。',
+        href: '/editor?focus=education',
+        icon: GraduationCap
+      },
+      {
+        title: '技术岗社招',
+        desc: '先写工作经历与核心技能，突出复杂项目与性能指标。',
+        href: '/editor?focus=experience',
+        icon: Workflow
+      },
+      {
+        title: '产品/运营岗位',
+        desc: '先整理项目成果，再打开 AI 面板打磨表达与关键词。',
+        href: '/editor?focus=projects&panel=ai',
+        icon: Target
+      },
+      {
+        title: '通用模板起步',
+        desc: '直接打开模板面板，先定 ATS 友好的版式再填内容。',
+        href: '/editor?panel=template',
+        icon: Building2
+      }
+    ]
+  }, [locale])
+
+  /**
    * 返回顶部
    * 用平滑滚动提升页面交互体验
    */
@@ -219,12 +285,7 @@ export default function HomePage() {
 
             <ScrollFadeIn direction="up">
               <div className="mx-auto w-full max-w-[460px]">
-                <motion.div
-                  animate={{ y: [0, -6, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                  className="relative rounded-3xl border border-slate-200 bg-white p-6"
-                  style={{ aspectRatio: '1 / 1.33' }}
-                >
+                <div className="relative rounded-3xl border border-slate-200 bg-white p-6" style={{ aspectRatio: '1 / 1.33' }}>
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                     <div className="h-2.5 w-32 rounded-full bg-slate-900" />
                     <div className="mt-2 h-2 w-24 rounded-full bg-slate-400" />
@@ -245,29 +306,63 @@ export default function HomePage() {
                       <div className="h-2 w-4/6 rounded-full bg-gradient-to-r from-emerald-500 to-emerald-300" />
                     </div>
                   </div>
-                  <motion.div
-                    animate={{ y: [0, -8, 0] }}
-                    transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute -right-5 top-8 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800"
-                  >
+                  <div className="absolute -right-5 top-8 rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs font-semibold text-cyan-800">
                     <div className="flex items-center gap-1">
                       <Bot className="h-3.5 w-3.5" />
                       {locale === 'en' ? 'AI Rewrite' : 'AI重写'}
                     </div>
-                  </motion.div>
-                  <motion.div
-                    animate={{ y: [0, 6, 0] }}
-                    transition={{ duration: 3.3, repeat: Infinity, ease: 'easeInOut' }}
-                    className="absolute -left-5 bottom-10 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800"
-                  >
+                  </div>
+                  <div className="absolute -left-5 bottom-10 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
                     <div className="flex items-center gap-1">
                       <FileCheck2 className="h-3.5 w-3.5" />
                       {locale === 'en' ? 'ATS Ready' : 'ATS就绪'}
                     </div>
-                  </motion.div>
-                </motion.div>
+                  </div>
+                </div>
               </div>
             </ScrollFadeIn>
+          </div>
+        </section>
+
+        <section className="bg-white px-4 py-12 sm:px-6 lg:px-8 lg:py-14">
+          <div className="mx-auto w-full max-w-7xl">
+            <ScrollFadeIn direction="up">
+              <div className="mb-6 flex items-center justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">
+                    {locale === 'en' ? 'Start by Hiring Scenario' : '按投递场景快速开始'}
+                  </h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
+                    {locale === 'en'
+                      ? 'Choose one entry and land directly on the right editing path.'
+                      : '从真实招聘流程出发，直接进入对应模块，减少无效点击。'}
+                  </p>
+                </div>
+              </div>
+            </ScrollFadeIn>
+
+            <StaggerFadeIn className="grid gap-4 md:grid-cols-2 xl:grid-cols-4" staggerDelay={0.08} direction="up">
+              {workflowEntries.map((item) => {
+                const Icon = item.icon
+                return (
+                  <Link
+                    key={item.title}
+                    href={item.href}
+                    className="group rounded-2xl border border-slate-200 bg-slate-50 p-4 transition-colors hover:border-slate-300"
+                  >
+                    <div className="inline-flex rounded-lg border border-slate-200 bg-white p-2 text-slate-700">
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <h3 className="mt-3 text-base font-semibold text-slate-900">{item.title}</h3>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{item.desc}</p>
+                    <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-slate-700">
+                      {locale === 'en' ? 'Open editor' : '进入编辑器'}
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </div>
+                  </Link>
+                )
+              })}
+            </StaggerFadeIn>
           </div>
         </section>
 

@@ -29,6 +29,7 @@ import AIConfigModal from './AIConfigModal'
 import { ResumeData } from '@/types/resume'
 import { loadResumeFromFile } from '@/utils/fileOperations'
 import { useToastContext } from './Toast'
+import { navigationItems } from '@/data/navigation'
 // 移除清空确认对话框，直接清空
 
 /**
@@ -68,6 +69,10 @@ interface EditorToolbarProps {
   onExport: (format: 'pdf' | 'png' | 'jpg') => Promise<void>
   /** 手动保存功能 */
   onSave?: () => Promise<void>
+  /** 当前编辑模块 */
+  activeSection?: string
+  /** 快速切换编辑模块 */
+  onQuickSectionChange?: (section: string) => void
 
 }
 
@@ -92,7 +97,9 @@ export default function EditorToolbar({
   onShowTemplateSelector,
   onShowExportDialog: _onShowExportDialog,
   onExport,
-  onSave
+  onSave,
+  activeSection,
+  onQuickSectionChange
 }: EditorToolbarProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
@@ -100,6 +107,27 @@ export default function EditorToolbar({
   // 直接清空，无需确认
   const { success, error: showError } = useToastContext()
   const { t } = useLanguage()
+
+  /**
+   * 获取编辑模块显示名称
+   * 统一处理工具栏下拉框的中英文文案，避免多处重复判断。
+   */
+  const getSectionLabel = (sectionId: string) => {
+    switch (sectionId) {
+      case 'personal':
+        return t.editor.personalInfo.title
+      case 'experience':
+        return t.editor.experience.title
+      case 'education':
+        return t.editor.education.title
+      case 'skills':
+        return t.editor.skills.title
+      case 'projects':
+        return t.editor.projects.title
+      default:
+        return sectionId
+    }
+  }
 
   /**
    * 处理AI配置保存
@@ -170,6 +198,24 @@ export default function EditorToolbar({
                 )}
             </div>
           </div>
+
+          {/* 中部：章节快速跳转 */}
+          {activeSection && onQuickSectionChange && (
+            <div className="hidden md:flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
+              <span className="text-xs font-medium text-gray-500">{t.common.edit}</span>
+              <select
+                value={activeSection}
+                onChange={(event) => onQuickSectionChange(event.target.value)}
+                className="min-w-28 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              >
+                {navigationItems.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {getSectionLabel(item.id)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* 右侧：工具栏按钮组 - 分组设计 */}
           <div className="flex items-center gap-2">

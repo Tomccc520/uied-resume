@@ -6,7 +6,7 @@
  * @createDate 2025-9-22
  */
 
-import React, { useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Code, GripVertical, Palette, Plus, SlidersHorizontal, ArrowDownWideNarrow } from 'lucide-react'
 import { AnimatePresence, Reorder } from 'framer-motion'
 import { Skill } from '@/types/resume'
@@ -28,6 +28,13 @@ interface SkillStyleOption {
   value: SkillDisplayStyle
   label: string
   icon: string
+}
+
+interface SkillPackOption {
+  key: string
+  label: string
+  category: string
+  values: string[]
 }
 
 /**
@@ -94,6 +101,68 @@ export function SkillsForm({ skills, onChange }: SkillsFormProps) {
   const categoryOptions = locale === 'zh'
     ? ['前端开发', '后端开发', '数据分析', '产品能力', '设计能力', '通用能力']
     : ['Frontend', 'Backend', 'Data', 'Product', 'Design', 'General']
+
+  /**
+   * 常见岗位技能包
+   * 提供招聘场景常用技能集合，支持一键补齐，降低手动输入成本。
+   */
+  const skillPackOptions = useMemo<SkillPackOption[]>(() => {
+    if (locale === 'zh') {
+      return [
+        {
+          key: 'frontend',
+          label: '前端工程师常用',
+          category: '前端开发',
+          values: ['JavaScript', 'TypeScript', 'React', 'Next.js', '工程化', '性能优化']
+        },
+        {
+          key: 'product',
+          label: '产品经理常用',
+          category: '产品能力',
+          values: ['需求分析', '用户研究', 'PRD', '数据分析', '跨团队协作']
+        },
+        {
+          key: 'operations',
+          label: '运营岗位常用',
+          category: '通用能力',
+          values: ['活动策划', '内容运营', '增长策略', '数据复盘', '用户运营']
+        },
+        {
+          key: 'design',
+          label: '设计岗位常用',
+          category: '设计能力',
+          values: ['Figma', '视觉设计', '交互设计', '设计系统', '可用性测试']
+        }
+      ]
+    }
+
+    return [
+      {
+        key: 'frontend',
+        label: 'Frontend Pack',
+        category: 'Frontend',
+        values: ['JavaScript', 'TypeScript', 'React', 'Next.js', 'Performance', 'Engineering']
+      },
+      {
+        key: 'product',
+        label: 'Product Pack',
+        category: 'Product',
+        values: ['Requirement Analysis', 'User Research', 'Roadmap', 'Data Insight', 'Collaboration']
+      },
+      {
+        key: 'operations',
+        label: 'Operations Pack',
+        category: 'General',
+        values: ['Campaign', 'Content Ops', 'Growth', 'Reporting', 'User Engagement']
+      },
+      {
+        key: 'design',
+        label: 'Design Pack',
+        category: 'Design',
+        values: ['Figma', 'Visual Design', 'Interaction Design', 'Design System', 'Usability Test']
+      }
+    ]
+  }, [locale])
 
   /**
    * 添加单个技能条目
@@ -185,6 +254,32 @@ export function SkillsForm({ skills, onChange }: SkillsFormProps) {
   const handleSortByLevel = () => {
     const sorted = [...skills].sort((a, b) => b.level - a.level)
     onChange(sorted)
+  }
+
+  /**
+   * 应用岗位技能包
+   * 只添加当前不存在的技能，避免覆盖用户已编辑内容。
+   */
+  const handleApplySkillPack = (pack: SkillPackOption) => {
+    const exists = new Set(skills.map((item) => item.name.trim().toLowerCase()))
+    const additions: Skill[] = []
+
+    pack.values.forEach((name, index) => {
+      const key = name.toLowerCase()
+      if (exists.has(key)) return
+      exists.add(key)
+      additions.push({
+        id: `pack-${pack.key}-${Date.now()}-${index}`,
+        name,
+        level: 70,
+        category: pack.category,
+        color: '#2563EB'
+      })
+    })
+
+    if (additions.length > 0) {
+      onChange([...skills, ...additions])
+    }
   }
 
   return (
@@ -294,6 +389,31 @@ export function SkillsForm({ skills, onChange }: SkillsFormProps) {
           >
             {locale === 'zh' ? '添加' : 'Add'}
           </button>
+        </div>
+      </div>
+
+      {/* 岗位技能包：面向常见招聘场景的一键补齐入口 */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-900">
+            {locale === 'zh' ? '岗位技能包' : 'Role Skill Packs'}
+          </span>
+          <span className="text-xs text-gray-500">
+            {locale === 'zh' ? '不会覆盖已填写技能' : 'Will not overwrite existing skills'}
+          </span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {skillPackOptions.map((pack) => (
+            <button
+              key={pack.key}
+              type="button"
+              onClick={() => handleApplySkillPack(pack)}
+              className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-left transition-colors hover:border-blue-300 hover:bg-blue-50"
+            >
+              <div className="text-sm font-medium text-gray-900">{pack.label}</div>
+              <div className="mt-1 truncate text-xs text-gray-500">{pack.values.join(' / ')}</div>
+            </button>
+          ))}
         </div>
       </div>
 

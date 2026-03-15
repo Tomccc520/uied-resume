@@ -14,6 +14,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import dynamic from 'next/dynamic'
+import { useSearchParams } from 'next/navigation'
 import ResumePreview from '@/components/ResumePreview'
 import TemplateStyleSync from '@/components/TemplateStyleSync'
 import Header from '@/components/Header'
@@ -129,6 +130,7 @@ export default function EditorPage() {
   const [previewZoom, setPreviewZoom] = useState(100)
   const [currentPage, setCurrentPage] = useState(1)
   const totalPages = 1
+  const searchParams = useSearchParams()
   
   const { t } = useLanguage()
 
@@ -419,6 +421,28 @@ export default function EditorPage() {
   const handleSave = useCallback(async () => {
     await saveNow()
   }, [saveNow])
+
+  /**
+   * 应用首页入口参数
+   * 支持通过 URL 参数快速定位编辑模块，并打开 AI/模板面板。
+   */
+  useEffect(() => {
+    const focus = searchParams.get('focus')
+    const panel = searchParams.get('panel')
+    const validSections = new Set(['personal', 'experience', 'education', 'skills', 'projects'])
+
+    if (focus && validSections.has(focus)) {
+      setActiveSection(focus)
+    }
+
+    if (panel === 'template') {
+      setShowTemplateSelector(true)
+    }
+
+    if (panel === 'ai') {
+      setShowUnifiedAI(true)
+    }
+  }, [searchParams])
   
   /**
    * 从本地存储加载简历数据 - 增强错误恢复
@@ -665,6 +689,8 @@ export default function EditorPage() {
               onShowExportDialog={() => setShowExportDialog(true)}
               onExport={handleExport}
               onSave={handleSave}
+              activeSection={activeSection}
+              onQuickSectionChange={setActiveSection}
             />
 
             {/* 编辑器和预览区域 - 使用三栏布局 */}

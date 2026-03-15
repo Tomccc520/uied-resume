@@ -1,5 +1,4 @@
 import React from 'react'
-import { motion } from 'framer-motion'
 import { Palette, LucideIcon } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 
