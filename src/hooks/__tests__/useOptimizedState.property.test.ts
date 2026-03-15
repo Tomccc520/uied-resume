@@ -37,9 +37,9 @@ interface DebounceSimulator<T> {
 function simulateDebounce<T>(
   initialValue: T,
   updates: T[],
-  debounceMs: number = 300
+  _debounceMs: number = 300
 ): DebounceSimulator<T> {
-  let state: DebounceSimulator<T> = {
+  const state: DebounceSimulator<T> = {
     value: initialValue,
     pendingValue: initialValue,
     batchedUpdates: 0,
@@ -71,7 +71,7 @@ function simulateDebounce<T>(
 function simulateMultipleWindows<T>(
   initialValue: T,
   windows: T[][], // Array of update batches, each batch is within one debounce window
-  debounceMs: number = 300
+  _debounceMs: number = 300
 ): { totalUpdates: number; actualRenders: number; finalValue: T } {
   let currentValue = initialValue;
   let totalUpdates = 0;
@@ -167,7 +167,7 @@ describe('Property 1: Debounced Preview Updates', () => {
             const result = simulateDebounce(initialValue, []);
             
             // Property: no updates means no renders
-            return result.actualRenders === 0 && result.value === initialValue;
+            return result.actualRenders === 0 && Object.is(result.value, initialValue);
           }
         ),
         { numRuns: 50 }
@@ -418,7 +418,7 @@ describe('useOptimizedState Hook Behavior Properties', () => {
         fc.array(fc.integer(), { minLength: 1, maxLength: 50 }),
         (initial, updates) => {
           // Simulate cancel behavior
-          let value = initial;
+          const value = initial;
           let pendingValue = initial;
           let isUpdating = false;
           
