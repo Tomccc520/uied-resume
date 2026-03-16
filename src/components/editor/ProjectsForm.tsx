@@ -7,7 +7,7 @@
  */
 
 import React from 'react'
-import { FolderOpen } from 'lucide-react'
+import { Copy, FolderOpen, MoveDown, MoveUp } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { Project } from '@/types/resume'
 import { EditableCard } from './EditableCard'
@@ -16,6 +16,8 @@ import { SectionHeader } from './SectionHeader'
 import FormField, { FormFieldGroup } from '@/components/FormField'
 import { RichTextEditor } from './RichTextEditor'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useListEditor } from '@/hooks/useListEditor'
+import { formatLineItems, formatTagItems, parseLineItems, parseTagItems } from '@/utils/editorTextParsers'
 
 interface ProjectsFormProps {
   projects: Project[]
@@ -23,12 +25,26 @@ interface ProjectsFormProps {
 }
 
 export function ProjectsForm({ projects, onChange }: ProjectsFormProps) {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
+  const isZh = locale === 'zh'
+  const {
+    addItem,
+    updateItemField,
+    deleteItem,
+    duplicateItem,
+    moveItem
+  } = useListEditor<Project>({
+    items: projects,
+    onChange
+  })
 
-  // 添加项目
+  /**
+   * 添加项目
+   * 统一通过列表编辑 Hook 维护列表状态。
+   */
   const addProject = () => {
     const newProject: Project = {
-      id: Date.now().toString(),
+      id: `proj-${Date.now()}`,
       name: '',
       description: '',
       technologies: [],
@@ -37,20 +53,7 @@ export function ProjectsForm({ projects, onChange }: ProjectsFormProps) {
       url: '',
       highlights: ['']
     }
-    onChange([...projects, newProject])
-  }
-
-  // 更新项目
-  const updateProject = (id: string, field: keyof Project, value: any) => {
-    const updatedProjects = projects.map(project => 
-      project.id === id ? { ...project, [field]: value } : project
-    )
-    onChange(updatedProjects)
-  }
-
-  // 删除项目
-  const deleteProject = (id: string) => {
-    onChange(projects.filter(project => project.id !== id))
+    addItem(newProject)
   }
 
   return (
@@ -64,19 +67,52 @@ export function ProjectsForm({ projects, onChange }: ProjectsFormProps) {
 
       <div className="space-y-4">
         <AnimatePresence mode="popLayout">
-          {projects.map((project) => (
+          {projects.map((project, index) => (
             <EditableCard
               key={project.id}
               title={project.name || t.editor.projects.placeholders.name}
               subtitle={project.description?.slice(0, 30)}
-              onDelete={() => deleteProject(project.id)}
+              onDelete={() => deleteItem(project.id)}
             >
               <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      duplicateItem(project.id, {
+                        name: project.name ? `${project.name}${isZh ? '（复制）' : ' (Copy)'}` : project.name
+                      })
+                    }
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-700"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    {isZh ? '复制' : 'Duplicate'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveItem(project.id, 'up')}
+                    disabled={index === 0}
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <MoveUp className="h-3.5 w-3.5" />
+                    {isZh ? '上移' : 'Move Up'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveItem(project.id, 'down')}
+                    disabled={index === projects.length - 1}
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <MoveDown className="h-3.5 w-3.5" />
+                    {isZh ? '下移' : 'Move Down'}
+                  </button>
+                </div>
+
                 <FormField
                   label={t.editor.projects.name}
                   type="text"
                   value={project.name}
-                  onChange={(value) => updateProject(project.id, 'name', value)}
+                  onChange={(value) => updateItemField(project.id, 'name', value)}
                   placeholder={t.editor.projects.placeholders.name}
                 />
 
@@ -84,7 +120,7 @@ export function ProjectsForm({ projects, onChange }: ProjectsFormProps) {
                 <RichTextEditor
                   label={t.editor.projects.description_label}
                   value={project.description}
-                  onChange={(value) => updateProject(project.id, 'description', value)}
+                  onChange={(value) => updateItemField(project.id, 'description', value)}
                   placeholder={t.editor.projects.placeholders.description}
                   minRows={3}
                   maxRows={10}
@@ -97,13 +133,13 @@ export function ProjectsForm({ projects, onChange }: ProjectsFormProps) {
                     label={t.editor.projects.startDate}
                     type="month"
                     value={project.startDate}
-                    onChange={(value) => updateProject(project.id, 'startDate', value)}
+                    onChange={(value) => updateItemField(project.id, 'startDate', value)}
                   />
                   <FormField
                     label={t.editor.projects.endDate}
                     type="month"
                     value={project.endDate}
-                    onChange={(value) => updateProject(project.id, 'endDate', value)}
+                    onChange={(value) => updateItemField(project.id, 'endDate', value)}
                   />
                 </FormFieldGroup>
 
@@ -111,23 +147,23 @@ export function ProjectsForm({ projects, onChange }: ProjectsFormProps) {
                   label={t.editor.projects.link}
                   type="url"
                   value={project.url || ''}
-                  onChange={(value) => updateProject(project.id, 'url', value)}
+                  onChange={(value) => updateItemField(project.id, 'url', value)}
                   placeholder={t.editor.projects.placeholders.link}
                 />
 
                 <FormField
                   label={t.editor.projects.technologies}
                   type="text"
-                  value={project.technologies.join(', ')}
-                  onChange={(value) => updateProject(project.id, 'technologies', value.split(',').map(t => t.trim()))}
+                  value={formatTagItems(project.technologies)}
+                  onChange={(value) => updateItemField(project.id, 'technologies', parseTagItems(value))}
                   placeholder={t.editor.projects.placeholders.technologies}
                 />
 
                 {/* 使用富文本编辑器 */}
                 <RichTextEditor
                   label={t.editor.projects.highlights}
-                  value={project.highlights.join('\n')}
-                  onChange={(value) => updateProject(project.id, 'highlights', value.split('\n').filter(line => line.trim()))}
+                  value={formatLineItems(project.highlights)}
+                  onChange={(value) => updateItemField(project.id, 'highlights', parseLineItems(value))}
                   placeholder={t.editor.projects.placeholders.highlights}
                   minRows={3}
                   maxRows={10}

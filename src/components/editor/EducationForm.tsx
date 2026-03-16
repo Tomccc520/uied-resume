@@ -7,7 +7,7 @@
  */
 
 import React from 'react'
-import { GraduationCap } from 'lucide-react'
+import { Copy, GraduationCap, MoveDown, MoveUp } from 'lucide-react'
 import { AnimatePresence } from 'framer-motion'
 import { Education } from '@/types/resume'
 import { EditableCard } from './EditableCard'
@@ -16,6 +16,7 @@ import { SectionHeader } from './SectionHeader'
 import FormField, { FormFieldGroup } from '@/components/FormField'
 import { RichTextEditor } from './RichTextEditor'
 import { useLanguage } from '@/contexts/LanguageContext'
+import { useListEditor } from '@/hooks/useListEditor'
 
 interface EducationFormProps {
   education: Education[]
@@ -23,12 +24,26 @@ interface EducationFormProps {
 }
 
 export function EducationForm({ education, onChange }: EducationFormProps) {
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
+  const isZh = locale === 'zh'
+  const {
+    addItem,
+    updateItemField,
+    deleteItem,
+    duplicateItem,
+    moveItem
+  } = useListEditor<Education>({
+    items: education,
+    onChange
+  })
 
-  // 添加教育经历
+  /**
+   * 添加教育经历
+   * 统一使用列表编辑 Hook，保持编辑逻辑一致。
+   */
   const addEducation = () => {
     const newEducation: Education = {
-      id: Date.now().toString(),
+      id: `edu-${Date.now()}`,
       school: '',
       degree: '',
       major: '',
@@ -37,20 +52,7 @@ export function EducationForm({ education, onChange }: EducationFormProps) {
       gpa: '',
       description: ''
     }
-    onChange([...education, newEducation])
-  }
-
-  // 更新教育经历
-  const updateEducation = (id: string, field: keyof Education, value: string) => {
-    const updatedEducation = education.map(edu => 
-      edu.id === id ? { ...edu, [field]: value } : edu
-    )
-    onChange(updatedEducation)
-  }
-
-  // 删除教育经历
-  const deleteEducation = (id: string) => {
-    onChange(education.filter(edu => edu.id !== id))
+    addItem(newEducation)
   }
 
   return (
@@ -64,27 +66,60 @@ export function EducationForm({ education, onChange }: EducationFormProps) {
 
       <div className="space-y-4">
         <AnimatePresence mode="popLayout">
-          {education.map((edu) => (
+          {education.map((edu, index) => (
             <EditableCard
               key={edu.id}
               title={edu.school || t.editor.education.placeholders.school}
               subtitle={edu.major}
-              onDelete={() => deleteEducation(edu.id)}
+              onDelete={() => deleteItem(edu.id)}
             >
               <div className="space-y-4">
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      duplicateItem(edu.id, {
+                        school: edu.school ? `${edu.school}${isZh ? '（复制）' : ' (Copy)'}` : edu.school
+                      })
+                    }
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-700"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    {isZh ? '复制' : 'Duplicate'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveItem(edu.id, 'up')}
+                    disabled={index === 0}
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <MoveUp className="h-3.5 w-3.5" />
+                    {isZh ? '上移' : 'Move Up'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveItem(edu.id, 'down')}
+                    disabled={index === education.length - 1}
+                    className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-600 hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <MoveDown className="h-3.5 w-3.5" />
+                    {isZh ? '下移' : 'Move Down'}
+                  </button>
+                </div>
+
                 <FormFieldGroup>
                   <FormField
                     label={t.editor.education.school}
                     type="text"
                     value={edu.school}
-                    onChange={(value) => updateEducation(edu.id, 'school', value)}
+                    onChange={(value) => updateItemField(edu.id, 'school', value)}
                     placeholder={t.editor.education.placeholders.school}
                   />
                   <FormField
                     label={t.editor.education.degree}
                     type="text"
                     value={edu.degree}
-                    onChange={(value) => updateEducation(edu.id, 'degree', value)}
+                    onChange={(value) => updateItemField(edu.id, 'degree', value)}
                     placeholder={t.editor.education.placeholders.degree}
                   />
                 </FormFieldGroup>
@@ -94,14 +129,14 @@ export function EducationForm({ education, onChange }: EducationFormProps) {
                     label={t.editor.education.major}
                     type="text"
                     value={edu.major}
-                    onChange={(value) => updateEducation(edu.id, 'major', value)}
+                    onChange={(value) => updateItemField(edu.id, 'major', value)}
                     placeholder={t.editor.education.placeholders.major}
                   />
                   <FormField
                     label={t.editor.education.gpa}
                     type="text"
                     value={edu.gpa || ''}
-                    onChange={(value) => updateEducation(edu.id, 'gpa', value)}
+                    onChange={(value) => updateItemField(edu.id, 'gpa', value)}
                     placeholder={t.editor.education.placeholders.gpa}
                   />
                 </FormFieldGroup>
@@ -111,13 +146,13 @@ export function EducationForm({ education, onChange }: EducationFormProps) {
                     label={t.editor.education.startDate}
                     type="month"
                     value={edu.startDate}
-                    onChange={(value) => updateEducation(edu.id, 'startDate', value)}
+                    onChange={(value) => updateItemField(edu.id, 'startDate', value)}
                   />
                   <FormField
                     label={t.editor.education.endDate}
                     type="month"
                     value={edu.endDate}
-                    onChange={(value) => updateEducation(edu.id, 'endDate', value)}
+                    onChange={(value) => updateItemField(edu.id, 'endDate', value)}
                   />
                 </FormFieldGroup>
 
@@ -125,7 +160,7 @@ export function EducationForm({ education, onChange }: EducationFormProps) {
                 <RichTextEditor
                   label={t.editor.education.description_label}
                   value={edu.description || ''}
-                  onChange={(value) => updateEducation(edu.id, 'description', value)}
+                  onChange={(value) => updateItemField(edu.id, 'description', value)}
                   placeholder={t.editor.education.placeholders.description}
                   minRows={3}
                   maxRows={8}
