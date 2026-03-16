@@ -21,7 +21,6 @@ import {
   FileJson,
   AlertCircle,
   Check,
-  Eye,
   Copy,
   RefreshCw,
   FileText,

@@ -13,7 +13,7 @@
 
 import React from 'react'
 import { motion } from 'framer-motion'
-import { A4_WIDTH_PX, A4_HEIGHT_PX, A4_WIDTH_MM, A4_HEIGHT_MM } from './PreviewPanel'
+import { A4_WIDTH_PX, A4_WIDTH_MM, A4_HEIGHT_MM } from './PreviewPanel'
 
 interface PreviewSkeletonProps {
   isDarkMode?: boolean

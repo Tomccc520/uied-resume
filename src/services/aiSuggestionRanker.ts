@@ -340,6 +340,15 @@ export class AISuggestionRanker {
       weights.diversity = 0.15
     }
 
+    // 根据历史文本长度微调可读性权重
+    if (Number.isFinite(avgLength) && avgLength > 0) {
+      if (avgLength > 200) {
+        weights.quality = Math.min(0.7, weights.quality + 0.05)
+      } else if (avgLength < 80) {
+        weights.relevance = Math.min(0.5, weights.relevance + 0.05)
+      }
+    }
+
     return { weights }
   }
 }

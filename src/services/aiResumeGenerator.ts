@@ -31,25 +31,25 @@ export class AIResumeGenerator {
       // 并行生成各个模块的内容
       const [summary, skills, experience1, experience2, education, project1, project2] = await Promise.all([
         // 生成个人简介
-        aiService.generateSuggestions('summary', '', `为${name}生成一份${targetPosition}职位的个人简介，突出${experience}工作经验和核心优势`),
+        aiService.generateSuggestions('summary', '', `为${name}生成一份${industry}行业${targetPosition}职位的个人简介，突出${experience}工作经验和核心优势`),
         
         // 生成技能列表
-        aiService.generateSuggestions('skills', '', `为${targetPosition}职位生成相关的专业技能列表，包括编程语言、框架、工具等`),
+        aiService.generateSuggestions('skills', '', `为${industry}行业${targetPosition}职位生成相关的专业技能列表，包括编程语言、框架、工具等`),
         
         // 生成工作经历1
-        aiService.generateSuggestions('experience', '', `为${targetPosition}生成一份${experience}的工作经历，包括公司名称、职位、工作内容和成果`),
+        aiService.generateSuggestions('experience', '', `为${industry}行业${targetPosition}生成一份${experience}的工作经历，包括公司名称、职位、工作内容和成果`),
         
         // 生成工作经历2
-        aiService.generateSuggestions('experience', '', `为${targetPosition}生成另一份工作经历，体现职业发展和技能提升`),
+        aiService.generateSuggestions('experience', '', `为${industry}行业${targetPosition}生成另一份工作经历，体现职业发展和技能提升`),
         
         // 生成教育背景
-        aiService.generateSuggestions('education', '', `为${targetPosition}生成合适的教育背景，包括学校、专业、学位等信息`),
+        aiService.generateSuggestions('education', '', `为${industry}行业${targetPosition}生成合适的教育背景，包括学校、专业、学位等信息`),
         
         // 生成项目经验1
-        aiService.generateSuggestions('projects', '', `为${targetPosition}生成一个技术项目经验，包括项目描述、技术栈和核心贡献`),
+        aiService.generateSuggestions('projects', '', `为${industry}行业${targetPosition}生成一个技术项目经验，包括项目描述、技术栈和核心贡献`),
         
         // 生成项目经验2
-        aiService.generateSuggestions('projects', '', `为${targetPosition}生成另一个项目经验，展示不同的技术能力和解决方案`)
+        aiService.generateSuggestions('projects', '', `为${industry}行业${targetPosition}生成另一个项目经验，展示不同的技术能力和解决方案`)
       ])
 
       // 构建完整的简历数据

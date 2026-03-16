@@ -34,7 +34,6 @@ export {
 
 import {
   A4_HEIGHT_PX,
-  calculatePaperStyle,
   clampZoom,
   clampPageNumber
 } from './previewUtils'
@@ -83,9 +82,6 @@ export function PreviewPanel({
   // 确保页码有效
   const safeCurrentPage = useMemo(() => clampPageNumber(currentPage, totalPages), [currentPage, totalPages])
   const safeTotalPages = useMemo(() => Math.max(1, totalPages), [totalPages])
-
-  // 计算纸张样式，保持 A4 比例
-  const paperStyle = useMemo(() => calculatePaperStyle(safeZoom, isDarkMode), [safeZoom, isDarkMode])
 
   // 处理缩放变化，确保值在有效范围内
   const handleZoomChange = useCallback((newZoom: number) => {

@@ -1,4 +1,4 @@
-import { User, Briefcase, GraduationCap, Code, FolderOpen, Palette } from 'lucide-react'
+import { User, Briefcase, GraduationCap, Code, FolderOpen } from 'lucide-react'
 
 export const navigationItems = [
   {

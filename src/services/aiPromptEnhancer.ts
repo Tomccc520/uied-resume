@@ -104,7 +104,7 @@ export class AIPromptEnhancer {
    */
   enhancePrompt(userPrompt: string, context: ContextInfo): string {
     const intent = this.detectIntent(userPrompt)
-    const { sectionType, currentContent, resumeData, targetPosition, industry, experienceLevel } = context
+    const { sectionType, currentContent, targetPosition, industry, experienceLevel } = context
     
     // 构建上下文信息
     let contextStr = ''
@@ -397,4 +397,3 @@ ${userPrompt}
 
 // 导出单例
 export const aiPromptEnhancer = new AIPromptEnhancer()
-

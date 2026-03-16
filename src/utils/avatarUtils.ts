@@ -35,7 +35,8 @@ export const getAvatarBorderRadius = (
     return '50%'  // 圆形
   }
   if (shape === 'rounded') {
-    return '8px'  // 正方形默认8px圆角
+    // 根据头像尺寸动态计算圆角，避免小尺寸头像圆角过大
+    return `${Math.max(6, Math.round(size * 0.08))}px`
   }
   return '0px'
 }
