@@ -52,6 +52,11 @@ import { LoadingOverlay } from '@/components/feedback/LoadingOverlay'
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog'
 import { useEditorExportFlow } from '@/hooks/useEditorExportFlow'
 import {
+  calculateResumeCompleteness,
+  ResumeSectionId,
+  SectionCompleteness
+} from '@/utils/resumeCompleteness'
+import {
   AISection,
   applyAISuggestionToResumeData,
   mergeGeneratedResumeData,
@@ -252,6 +257,13 @@ export default function EditorPage() {
       }
     ]
   })
+  const completeness = useMemo(() => calculateResumeCompleteness(resumeData), [resumeData])
+  const sectionCompletenessMap = useMemo(() => {
+    return completeness.sections.reduce((acc, item) => {
+      acc[item.section] = item
+      return acc
+    }, {} as Partial<Record<ResumeSectionId, SectionCompleteness>>)
+  }, [completeness.sections])
 
   // 导出工作流 Hook
   const {
@@ -629,6 +641,23 @@ export default function EditorPage() {
   }, [])
 
   /**
+   * 跳转到下一个未完成模块
+   * 结合完成度计算结果，帮助用户快速补齐核心内容。
+   */
+  const jumpToNextIncompleteSection = useCallback(() => {
+    if (!completeness.nextIncompleteSection) {
+      showSuccess('简历核心模块已基本完善')
+      return
+    }
+
+    setActiveSection(completeness.nextIncompleteSection)
+
+    if (typeof window !== 'undefined' && window.innerWidth < 1280) {
+      setIsPreviewMode(false)
+    }
+  }, [completeness.nextIncompleteSection, showSuccess])
+
+  /**
    * 规范化编辑模块到 AI 模块
    * 确保来自编辑器、预览区或快捷入口的 section 都能映射到统一 AI 模式。
    */
@@ -705,6 +734,9 @@ export default function EditorPage() {
               onSave={handleSave}
               activeSection={activeSection}
               onQuickSectionChange={setActiveSection}
+              completionPercent={completeness.totalScore}
+              incompleteSectionCount={completeness.totalSections - completeness.completedSections}
+              onJumpToNextIncomplete={jumpToNextIncompleteSection}
             />
 
             {/* 编辑器和预览区域 - 使用三栏布局 */}
@@ -745,6 +777,8 @@ export default function EditorPage() {
                       activeSection={activeSection}
                       onSectionChange={setActiveSection}
                       onShowTemplateSelector={() => setShowTemplateSelector(true)}
+                      sectionCompleteness={sectionCompletenessMap}
+                      onJumpToNextIncomplete={jumpToNextIncompleteSection}
                     />
                   }
                   centerPanel={

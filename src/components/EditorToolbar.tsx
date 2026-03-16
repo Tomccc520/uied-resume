@@ -73,6 +73,12 @@ interface EditorToolbarProps {
   activeSection?: string
   /** 快速切换编辑模块 */
   onQuickSectionChange?: (section: string) => void
+  /** 简历整体完成度（0-100） */
+  completionPercent?: number
+  /** 未完成模块数量 */
+  incompleteSectionCount?: number
+  /** 跳转到下一个未完成模块 */
+  onJumpToNextIncomplete?: () => void
 
 }
 
@@ -99,14 +105,18 @@ export default function EditorToolbar({
   onExport,
   onSave,
   activeSection,
-  onQuickSectionChange
+  onQuickSectionChange,
+  completionPercent = 0,
+  incompleteSectionCount = 0,
+  onJumpToNextIncomplete
 }: EditorToolbarProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showAIConfig, setShowAIConfig] = useState(false)
   // 直接清空，无需确认
   const { success, error: showError } = useToastContext()
-  const { t } = useLanguage()
+  const { t, locale } = useLanguage()
+  const isZh = locale === 'zh'
 
   /**
    * 获取编辑模块显示名称
@@ -201,7 +211,7 @@ export default function EditorToolbar({
 
           {/* 中部：章节快速跳转 */}
           {activeSection && onQuickSectionChange && (
-            <div className="hidden md:flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
+            <div className="hidden lg:flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
               <span className="text-xs font-medium text-gray-500">{t.common.edit}</span>
               <select
                 value={activeSection}
@@ -216,6 +226,35 @@ export default function EditorToolbar({
               </select>
             </div>
           )}
+
+          {/* 中部：完成度提示 */}
+          <div className="hidden xl:flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-2 py-1">
+            <div className="h-2 w-20 overflow-hidden rounded-full bg-gray-200">
+              <div
+                className={`h-full transition-all ${
+                  completionPercent >= 80
+                    ? 'bg-emerald-500'
+                    : completionPercent >= 60
+                      ? 'bg-amber-500'
+                      : 'bg-blue-500'
+                }`}
+                style={{ width: `${Math.max(0, Math.min(100, completionPercent))}%` }}
+              />
+            </div>
+            <span className="text-xs font-semibold text-gray-700">{completionPercent}%</span>
+            <span className="text-xs text-gray-500">
+              {isZh ? '完成度' : 'Completion'}
+            </span>
+            {onJumpToNextIncomplete && incompleteSectionCount > 0 && (
+              <button
+                type="button"
+                onClick={onJumpToNextIncomplete}
+                className="rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-600 transition-colors hover:border-blue-300 hover:text-blue-700"
+              >
+                {isZh ? '继续完善' : 'Next Incomplete'}
+              </button>
+            )}
+          </div>
 
           {/* 右侧：工具栏按钮组 - 分组设计 */}
           <div className="flex items-center gap-2">

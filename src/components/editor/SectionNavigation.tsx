@@ -1,11 +1,19 @@
+/**
+ * @copyright Tomda (https://www.tomda.top)
+ * @copyright UIED技术团队 (https://fsuied.com)
+ * @author UIED技术团队
+ * @createDate 2026-03-16
+ */
+
 'use client'
 
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { Palette, Settings2, ChevronDown, LucideIcon } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { navigationItems } from '@/data/navigation'
 import { StyleSettingsPanel } from './StyleSettingsPanel'
+import { ResumeSectionId, SectionCompleteness } from '@/utils/resumeCompleteness'
 
 /**
  * Navigation item structure
@@ -27,6 +35,10 @@ interface SectionNavigationProps {
   onSectionChange: (section: string) => void
   /** Callback to show template selector */
   onShowTemplateSelector?: () => void
+  /** 模块完成度 */
+  sectionCompleteness?: Partial<Record<ResumeSectionId, SectionCompleteness>>
+  /** 跳转到下一个待完善模块 */
+  onJumpToNextIncomplete?: () => void
   /** Custom class name */
   className?: string
 }
@@ -46,6 +58,8 @@ export function SectionNavigation({
   activeSection,
   onSectionChange,
   onShowTemplateSelector,
+  sectionCompleteness,
+  onJumpToNextIncomplete,
   className = ''
 }: SectionNavigationProps) {
   const { t, locale } = useLanguage()
@@ -86,6 +100,32 @@ export function SectionNavigation({
     }
   })
 
+  /**
+   * 计算侧栏总完成度
+   * 用于底部进度条和“继续完善”入口，减少用户在模块间来回查找。
+   */
+  const completionOverview = useMemo(() => {
+    const sectionList = translatedItems
+      .map((item) => sectionCompleteness?.[item.id as ResumeSectionId])
+      .filter((item): item is SectionCompleteness => Boolean(item))
+
+    if (sectionList.length === 0) {
+      return {
+        totalScore: 0,
+        incompleteCount: translatedItems.length
+      }
+    }
+
+    const totalScore = Math.round(
+      sectionList.reduce((sum, item) => sum + item.score, 0) / sectionList.length
+    )
+
+    return {
+      totalScore,
+      incompleteCount: sectionList.filter((item) => !item.completed).length
+    }
+  }, [sectionCompleteness, translatedItems])
+
   // Handle section click - scroll to section in editor
   const handleSectionClick = useCallback((sectionId: string) => {
     onSectionChange(sectionId)
@@ -111,6 +151,9 @@ export function SectionNavigation({
           {translatedItems.map((item) => {
             const IconComponent = item.icon
             const isActive = item.id === activeSection
+            const sectionState = sectionCompleteness?.[item.id as ResumeSectionId]
+            const sectionScore = sectionState?.score ?? 0
+            const sectionCompleted = Boolean(sectionState?.completed)
 
             return (
               <button
@@ -145,6 +188,21 @@ export function SectionNavigation({
                     isActive ? 'text-blue-500/80' : 'text-gray-500 group-hover:text-gray-600'
                   }`}>
                     {item.description}
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <span
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        sectionCompleted ? 'bg-emerald-500' : 'bg-amber-500'
+                      }`}
+                    />
+                    <span className="text-[11px] text-gray-500">
+                      {sectionCompleted
+                        ? (locale === 'zh' ? '已完善' : 'Completed')
+                        : (locale === 'zh' ? '待完善' : 'Needs work')}
+                    </span>
+                    <span className="ml-auto text-[11px] font-semibold text-gray-600">
+                      {sectionScore}%
+                    </span>
                   </div>
                 </div>
               </button>
@@ -217,19 +275,36 @@ export function SectionNavigation({
       {/* Progress indicator */}
       <div className="px-4 py-3 border-t border-gray-100 bg-gray-50/50 mt-4">
         <div className="flex items-center justify-between text-xs text-gray-500">
-          <span>{t.common.preview}</span>
+          <span>{locale === 'zh' ? '简历完成度' : 'Resume completion'}</span>
           <span className="font-medium text-gray-700">
-            {translatedItems.findIndex(item => item.id === activeSection) + 1}/{translatedItems.length}
+            {completionOverview.totalScore}%
           </span>
         </div>
         <div className="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-blue-500 rounded-full transition-all duration-300"
+            className={`h-full rounded-full transition-all duration-300 ${
+              completionOverview.totalScore >= 80
+                ? 'bg-emerald-500'
+                : completionOverview.totalScore >= 60
+                  ? 'bg-amber-500'
+                  : 'bg-blue-500'
+            }`}
             style={{ 
-              width: `${((translatedItems.findIndex(item => item.id === activeSection) + 1) / translatedItems.length) * 100}%` 
+              width: `${Math.max(0, Math.min(100, completionOverview.totalScore))}%` 
             }}
           />
         </div>
+        {onJumpToNextIncomplete && completionOverview.incompleteCount > 0 && (
+          <button
+            type="button"
+            onClick={onJumpToNextIncomplete}
+            className="mt-2 w-full rounded-lg border border-gray-200 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:border-blue-300 hover:text-blue-700"
+          >
+            {locale === 'zh'
+              ? `继续完善（剩余 ${completionOverview.incompleteCount} 项）`
+              : `Continue (${completionOverview.incompleteCount} pending)`}
+          </button>
+        )}
       </div>
     </div>
   )

@@ -189,12 +189,61 @@ export class JDMatcherService {
   }
 
   /**
+   * 判断关键词是否为噪声关键词
+   * 单字符英文关键词（如 "r"）会导致误匹配，这里统一过滤。
+   */
+  private isNoiseKeyword(keyword: string): boolean {
+    const normalized = keyword.trim().toLowerCase()
+    return /^[a-z]$/.test(normalized)
+  }
+
+  /**
+   * 判断文本是否匹配指定关键词
+   * 优先使用边界匹配，符号类关键词再用包含匹配兜底，提升稳定性。
+   */
+  private matchesKeyword(text: string, keyword: string): boolean {
+    const normalizedKeyword = keyword.trim().toLowerCase()
+    if (!normalizedKeyword || this.isNoiseKeyword(normalizedKeyword)) {
+      return false
+    }
+
+    // 中文关键词不适合英文单词边界，直接走包含匹配
+    if (/[\u4e00-\u9fff]/.test(normalizedKeyword)) {
+      return text.includes(normalizedKeyword)
+    }
+
+    const escapedKeyword = this.escapeRegex(normalizedKeyword).replace(/\s+/g, '\\s+')
+    const boundaryRegex = new RegExp(`(?:^|[^a-z0-9])${escapedKeyword}(?=$|[^a-z0-9])`, 'i')
+
+    if (boundaryRegex.test(text)) {
+      return true
+    }
+
+    // 对包含符号的关键词做兜底，兼容 "ci/cd"、"node.js"、"c++" 等写法
+    const hasSymbol = /[/.+#-]/.test(normalizedKeyword)
+    return hasSymbol ? text.includes(normalizedKeyword) : false
+  }
+
+  /**
+   * 统计行业关键词命中数量
+   * 用统一匹配规则计分，避免不同行业检测逻辑分叉。
+   */
+  private countIndustryKeywordMatches(text: string, keywords: string[]): number {
+    return keywords.reduce((score, keyword) => {
+      return score + (this.matchesKeyword(text, keyword) ? 1 : 0)
+    }, 0)
+  }
+
+  /**
    * 检测 JD 文本的行业类型
    * @param jdText - 职位描述文本
    * @returns 检测到的行业类型
    */
   detectIndustry(jdText: string): IndustryType {
-    const text = jdText.toLowerCase()
+    const text = jdText.toLowerCase().trim()
+    if (!text) {
+      return 'general'
+    }
     
     const industryScores: Record<IndustryType, number> = {
       tech: 0,
@@ -208,27 +257,13 @@ export class JDMatcherService {
     }
 
     // 计算各行业关键词匹配数
-    this.techIndustryKeywords.forEach(k => {
-      if (text.includes(k.toLowerCase())) industryScores.tech++
-    })
-    this.financeIndustryKeywords.forEach(k => {
-      if (text.includes(k.toLowerCase())) industryScores.finance++
-    })
-    this.healthcareIndustryKeywords.forEach(k => {
-      if (text.includes(k.toLowerCase())) industryScores.healthcare++
-    })
-    this.marketingIndustryKeywords.forEach(k => {
-      if (text.includes(k.toLowerCase())) industryScores.marketing++
-    })
-    this.designIndustryKeywords.forEach(k => {
-      if (text.includes(k.toLowerCase())) industryScores.design++
-    })
-    this.dataIndustryKeywords.forEach(k => {
-      if (text.includes(k.toLowerCase())) industryScores.data++
-    })
-    this.productIndustryKeywords.forEach(k => {
-      if (text.includes(k.toLowerCase())) industryScores.product++
-    })
+    industryScores.tech = this.countIndustryKeywordMatches(text, this.techIndustryKeywords)
+    industryScores.finance = this.countIndustryKeywordMatches(text, this.financeIndustryKeywords)
+    industryScores.healthcare = this.countIndustryKeywordMatches(text, this.healthcareIndustryKeywords)
+    industryScores.marketing = this.countIndustryKeywordMatches(text, this.marketingIndustryKeywords)
+    industryScores.design = this.countIndustryKeywordMatches(text, this.designIndustryKeywords)
+    industryScores.data = this.countIndustryKeywordMatches(text, this.dataIndustryKeywords)
+    industryScores.product = this.countIndustryKeywordMatches(text, this.productIndustryKeywords)
 
     // 找出得分最高的行业
     let maxScore = 0
@@ -276,31 +311,40 @@ export class JDMatcherService {
    * @returns 提取的关键词数组
    */
   extractKeywords(jdText: string): string[] {
-    const text = jdText.toLowerCase()
+    const text = jdText.toLowerCase().trim()
+    if (!text) {
+      return []
+    }
     const foundKeywords = new Set<string>()
 
     // 检测行业并获取相关关键词库
     const industry = this.detectIndustry(jdText)
     const industryKeywords = this.getIndustryKeywords(industry)
 
+    // 行业关键词 + 技术/数据兜底词库，降低行业误判导致的漏提取
+    const candidateKeywords = new Set<string>([
+      ...industryKeywords,
+      ...this.techIndustryKeywords,
+      ...this.dataIndustryKeywords
+    ])
+
     // 匹配行业关键词
-    industryKeywords.forEach(keyword => {
-      const regex = new RegExp(`\\b${this.escapeRegex(keyword)}\\b`, 'gi')
-      if (regex.test(text)) {
+    candidateKeywords.forEach(keyword => {
+      if (this.matchesKeyword(text, keyword)) {
         foundKeywords.add(keyword)
       }
     })
 
     // 匹配软技能关键词
     this.softSkillKeywords.forEach(keyword => {
-      if (text.includes(keyword.toLowerCase())) {
+      if (this.matchesKeyword(text, keyword)) {
         foundKeywords.add(keyword)
       }
     })
 
     // 匹配职位相关关键词
     this.roleKeywords.forEach(keyword => {
-      if (text.includes(keyword.toLowerCase())) {
+      if (this.matchesKeyword(text, keyword)) {
         foundKeywords.add(keyword)
       }
     })
@@ -429,8 +473,7 @@ export class JDMatcherService {
     const missingKeywords: string[] = []
 
     keywords.forEach(keyword => {
-      const regex = new RegExp(`\\b${this.escapeRegex(keyword)}\\b`, 'gi')
-      if (regex.test(resumeText) || resumeText.includes(keyword.toLowerCase())) {
+      if (this.matchesKeyword(resumeText, keyword)) {
         matchedKeywords.push(keyword)
       } else {
         missingKeywords.push(keyword)
