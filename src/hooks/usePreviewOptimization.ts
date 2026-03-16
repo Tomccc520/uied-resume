@@ -13,22 +13,28 @@ import { StyleConfig } from '@/contexts/StyleContext'
 /**
  * 预览缓存管理
  */
+interface PreviewCacheItem {
+  resumeData: ResumeData
+  styleConfig: StyleConfig
+  timestamp: number
+}
+
 class PreviewCache {
-  private cache: Map<string, any> = new Map()
+  private cache: Map<string, PreviewCacheItem> = new Map()
   private maxSize: number = 50
 
   // 生成缓存键
-  generateKey(data: any): string {
+  generateKey(data: unknown): string {
     return JSON.stringify(data)
   }
 
   // 获取缓存
-  get(key: string): any {
+  get(key: string): PreviewCacheItem | undefined {
     return this.cache.get(key)
   }
 
   // 设置缓存
-  set(key: string, value: any): void {
+  set(key: string, value: PreviewCacheItem): void {
     if (this.cache.size >= this.maxSize) {
       // 删除最旧的缓存项
       const firstKey = this.cache.keys().next().value as string | undefined
@@ -57,7 +63,7 @@ export function useDeferredPreview<T>(value: T): T {
 /**
  * 增量更新检测 - 只更新变化的部分
  */
-export function useIncrementalUpdate<T extends Record<string, any>>(
+export function useIncrementalUpdate<T extends object>(
   data: T,
   dependencies: (keyof T)[]
 ): Partial<T> {
@@ -259,7 +265,7 @@ export function useVirtualization(
 /**
  * 批量更新 - 合并多个状态更新
  */
-export function useBatchUpdate<T extends Record<string, any>>(initialValue: T) {
+export function useBatchUpdate<T extends object>(initialValue: T) {
   const [value, setValue] = useState<T>(initialValue)
   const pendingUpdates = useRef<Partial<T>[]>([])
   const updateTimer = useRef<NodeJS.Timeout>()

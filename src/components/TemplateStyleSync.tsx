@@ -48,6 +48,9 @@ export default function TemplateStyleSync({ currentTemplate }: TemplateStyleSync
     }
 
     // 构建新的样式配置
+    const avatarShape: StyleConfig['avatar']['shape'] =
+      currentTemplate.components?.personalInfo?.avatarPosition === 'center' ? 'circle' : 'rounded'
+
     const newConfig: StyleConfig = {
       ...defaultStyleConfig,
       fontFamily: currentTemplate.fonts?.heading || defaultStyleConfig.fontFamily,
@@ -80,7 +83,7 @@ export default function TemplateStyleSync({ currentTemplate }: TemplateStyleSync
       },
       avatar: {
         ...defaultStyleConfig.avatar,
-        shape: (currentTemplate.components?.personalInfo?.avatarPosition === 'center' ? 'circle' : 'rounded') as any,
+        shape: avatarShape,
         // 根据模板显示设置决定
         border: true
       },

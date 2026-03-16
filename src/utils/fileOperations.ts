@@ -137,21 +137,20 @@ export function loadResumeFromFile(): Promise<ResumeData> {
  * @param data 待验证的数据
  * @returns boolean 是否为有效的简历数据
  */
-export function validateResumeData(data: any): data is ResumeData {
-  try {
-    return (
-      data &&
-      typeof data === 'object' &&
-      data.personalInfo &&
-      typeof data.personalInfo === 'object' &&
-      Array.isArray(data.experience) &&
-      Array.isArray(data.education) &&
-      Array.isArray(data.skills) &&
-      Array.isArray(data.projects)
-    )
-  } catch {
+export function validateResumeData(data: unknown): data is ResumeData {
+  if (!data || typeof data !== 'object') {
     return false
   }
+
+  const candidate = data as Partial<ResumeData>
+  return (
+    Boolean(candidate.personalInfo) &&
+    typeof candidate.personalInfo === 'object' &&
+    Array.isArray(candidate.experience) &&
+    Array.isArray(candidate.education) &&
+    Array.isArray(candidate.skills) &&
+    Array.isArray(candidate.projects)
+  )
 }
 
 /**
