@@ -1,11 +1,21 @@
+/**
+ * @copyright Tomda (https://www.tomda.top)
+ * @copyright UIED技术团队 (https://fsuied.com)
+ * @author UIED技术团队
+ * @createDate 2026-03-26
+ */
+
 'use client'
 
-import React, { useMemo } from 'react'
+import React from 'react'
+import Image from 'next/image'
 import { ResumeData } from '@/types/resume'
 import { StyleConfig } from '@/contexts/StyleContext'
-import { MapPin, Mail, Phone, Globe, Briefcase } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { formatDate } from '@/utils/dateFormatter'
+import { getAvatarClassName, getAvatarInlineStyle } from '@/utils/avatarUtils'
+import { getUnifiedResumeMetrics } from './resumePrintMetrics'
+import { createContactQRCodeImageUrl, resolveContactQRCodePayload } from '@/utils/contactQRCode'
 
 interface TemplateProps {
   resumeData: ResumeData
@@ -14,9 +24,8 @@ interface TemplateProps {
 }
 
 /**
- * 渐变头部模板
- * 顶部渐变色块 + 白色内容区，现代感十足
- * 支持 headerLayout、contactLayout、sectionOrder、columns 等样式设置
+ * 顶部信息带模板
+ * 采用“头部信息带 + 双栏正文”的投递结构，兼顾信息密度与可读性。
  */
 export const GradientHeader: React.FC<TemplateProps> = ({
   resumeData,
@@ -24,665 +33,398 @@ export const GradientHeader: React.FC<TemplateProps> = ({
   onSectionClick
 }) => {
   const { personalInfo, experience, education, projects, skills } = resumeData
-  const { colors, fontSize, spacing, layout, skills: skillsConfig, fontFamily } = styleConfig
+  const { colors, fontSize, spacing, fontFamily } = styleConfig
   const { locale, t } = useLanguage()
 
+  const fontFamilyStyle = fontFamily || '"Calibri", "Arial", "PingFang SC", "Hiragino Sans GB", sans-serif'
+  const pagePadding = styleConfig.layout?.padding || 32
+  const baseContentSize = fontSize?.content || 14
+  const metrics = getUnifiedResumeMetrics({ baseContentSize, sectionSpacing: spacing?.section })
+  const sectionGap = metrics.sectionGap
+  const headingColor = colors.primary || '#1f2937'
+  const textColor = colors.text || '#1f2937'
+  const mutedColor = colors.secondary || '#6b7280'
+  const accentColor = colors.accent || '#2563eb'
+  const borderColor = '#d8dee7'
+  const isEnglish = locale === 'en'
+  const contactQRCodePayload = resolveContactQRCodePayload(personalInfo)
+  const contactQRCodeUrl = contactQRCodePayload ? createContactQRCodeImageUrl(contactQRCodePayload, 176) : null
+
+  /**
+   * 格式化日期文本
+   * 统一中英文模式下的年月输出。
+   */
   const formatDateStr = (date?: string) => formatDate(date, locale)
 
-  // 渐变色
-  const gradientFrom = colors.primary || '#6366f1'
-  const gradientTo = colors.secondary || '#8b5cf6'
-  
-  // 字体大小
-  const nameFontSize = fontSize?.name || 28
-  const titleFontSize = fontSize?.title || 18
-  const contentFontSize = fontSize?.content || 14
-  const smallFontSize = fontSize?.small || 12
-  
-  // 间距
-  const sectionSpacing = spacing?.section || 24
-  const itemSpacing = spacing?.item || 16
-  const lineHeight = spacing?.line ? Math.max(1.4, spacing.line / contentFontSize) : 1.4
-
-  // 页面内边距
-  const pagePadding = layout?.padding || 40
-  
-  // 布局设置
-  const headerLayout = layout?.headerLayout || 'horizontal'
-  const contactLayout = layout?.contactLayout || 'inline'
-  const columns = layout?.columns || 1
-  const sectionOrder = layout?.sectionOrder || ['personal', 'experience', 'education', 'skills', 'projects']
-  const columnSectionOrder = layout?.columnSectionOrder || {
-    left: ['personal', 'skills', 'education'],
-    right: ['experience', 'projects']
+  /**
+   * 格式化时间区间
+   * 支持“当前在职”和普通结束时间两种状态。
+   */
+  const formatPeriod = (startDate?: string, endDate?: string, isCurrent?: boolean) => {
+    return `${formatDateStr(startDate)} - ${isCurrent ? t.editor.experience.current : formatDateStr(endDate)}`
   }
-  const leftColumnWidth = layout?.leftColumnWidth || 35
-  const columnGap = layout?.columnGap || 24
 
   /**
-   * 渲染联系信息 - 根据 contactLayout 选择不同样式
+   * 构建联系方式摘要
+   * 使用“·”连接联系人字段，符合主流招聘平台样式。
    */
-  const renderContactInfo = useMemo(() => {
-    const contactItems = [
-      personalInfo.phone && { icon: Phone, value: personalInfo.phone, key: 'phone' },
-      personalInfo.email && { icon: Mail, value: personalInfo.email, key: 'email' },
-      personalInfo.location && { icon: MapPin, value: personalInfo.location, key: 'location' },
-      personalInfo.website && { icon: Globe, value: t.editor.templatePreview.personalWebsite, key: 'website' }
-    ].filter(Boolean) as { icon: any; value: string; key: string }[]
-
-    switch (contactLayout) {
-      case 'grouped':
-        return (
-          <div className="flex flex-col gap-1.5" style={{ fontSize: `${smallFontSize}px` }}>
-            {contactItems.map(item => (
-              <div key={item.key} className="flex items-center gap-1.5 text-white/80">
-                <item.icon size={14} />
-                <span>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        )
-      case 'cards':
-        return (
-          <div className="flex flex-wrap gap-2" style={{ fontSize: `${smallFontSize}px` }}>
-            {contactItems.map(item => (
-              <div key={item.key} className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 rounded-full text-white/90">
-                <item.icon size={12} />
-                <span>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        )
-      case 'grid':
-        return (
-          <div className="grid grid-cols-2 gap-2" style={{ fontSize: `${smallFontSize}px` }}>
-            {contactItems.map(item => (
-              <div key={item.key} className="flex items-center gap-1.5 text-white/80">
-                <item.icon size={14} />
-                <span>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        )
-      case 'sidebar':
-        return (
-          <div className="flex flex-col gap-1.5 border-l-2 border-white/30 pl-3" style={{ fontSize: `${smallFontSize}px` }}>
-            {contactItems.map(item => (
-              <div key={item.key} className="flex items-center gap-1.5 text-white/80">
-                <item.icon size={14} />
-                <span>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        )
-      case 'inline':
-      default:
-        return (
-          <div className="flex flex-wrap gap-4 text-white/80" style={{ fontSize: `${smallFontSize}px` }}>
-            {contactItems.map(item => (
-              <div key={item.key} className="flex items-center gap-1.5">
-                <item.icon size={14} />
-                <span>{item.value}</span>
-              </div>
-            ))}
-          </div>
-        )
-    }
-  }, [personalInfo, contactLayout, smallFontSize, t])
+  const getContactSummary = () => {
+    const websiteLabel = personalInfo.website
+      ? personalInfo.website.replace(/^https?:\/\//i, '').replace(/\/$/, '')
+      : ''
+    return [personalInfo.phone, personalInfo.email, personalInfo.location, websiteLabel]
+      .filter(Boolean)
+      .join(' · ')
+  }
 
   /**
-   * 渲染头部 - 根据 headerLayout 选择不同样式
+   * 渲染章节标题
+   * 统一章节标题比例与底线间距，提升全文扫描效率。
    */
-  const renderHeader = useMemo(() => {
-    const headerStyle = {
-      background: `linear-gradient(135deg, ${gradientFrom} 0%, ${gradientTo} 100%)`,
-      padding: `${pagePadding}px`
-    }
-
-    switch (headerLayout) {
-      case 'centered':
-        return (
-          <div 
-            className="relative text-white text-center"
-            style={headerStyle}
-            onClick={() => onSectionClick?.('personal')}
-          >
-            {/* 装饰图案 */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-1/2 -translate-x-1/2" />
-            </div>
-            
-            <div className="relative">
-              {personalInfo.avatar && (
-                <img 
-                  src={personalInfo.avatar} 
-                  alt={personalInfo.name}
-                  className="w-28 h-28 rounded-full object-cover border-4 border-white/30 shadow-xl mx-auto mb-4"
-                />
-              )}
-              <h1 
-                className="font-bold tracking-wide mb-2"
-                style={{ fontSize: `${nameFontSize}px` }}
-              >
-                {personalInfo.name}
-              </h1>
-              <p 
-                className="text-white/90 font-medium mb-4"
-                style={{ fontSize: `${titleFontSize}px` }}
-              >
-                {personalInfo.title}
-              </p>
-              <div className="flex justify-center">
-                {renderContactInfo}
-              </div>
-            </div>
-          </div>
-        )
-      case 'vertical':
-        return (
-          <div 
-            className="relative text-white"
-            style={headerStyle}
-            onClick={() => onSectionClick?.('personal')}
-          >
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/2" />
-            </div>
-            
-            <div className="relative">
-              {personalInfo.avatar && (
-                <img 
-                  src={personalInfo.avatar} 
-                  alt={personalInfo.name}
-                  className="w-28 h-28 rounded-full object-cover border-4 border-white/30 shadow-xl mb-4"
-                />
-              )}
-              <h1 
-                className="font-bold tracking-wide mb-2"
-                style={{ fontSize: `${nameFontSize}px` }}
-              >
-                {personalInfo.name}
-              </h1>
-              <p 
-                className="text-white/90 font-medium mb-4"
-                style={{ fontSize: `${titleFontSize}px` }}
-              >
-                {personalInfo.title}
-              </p>
-              {renderContactInfo}
-            </div>
-          </div>
-        )
-      case 'horizontal':
-      default:
-        return (
-          <div 
-            className="relative text-white"
-            style={headerStyle}
-            onClick={() => onSectionClick?.('personal')}
-          >
-            {/* 装饰图案 */}
-            <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-white rounded-full translate-y-1/2 -translate-x-1/2" />
-            </div>
-            
-            <div className="relative flex items-center gap-6">
-              {personalInfo.avatar && (
-                <img 
-                  src={personalInfo.avatar} 
-                  alt={personalInfo.name}
-                  className="w-28 h-28 rounded-full object-cover border-4 border-white/30 shadow-xl"
-                />
-              )}
-              
-              <div className="flex-1">
-                <h1 
-                  className="font-bold tracking-wide mb-2"
-                  style={{ fontSize: `${nameFontSize}px` }}
-                >
-                  {personalInfo.name}
-                </h1>
-                <p 
-                  className="text-white/90 font-medium mb-4"
-                  style={{ fontSize: `${titleFontSize}px` }}
-                >
-                  {personalInfo.title}
-                </p>
-                {renderContactInfo}
-              </div>
-            </div>
-          </div>
-        )
-    }
-  }, [personalInfo, headerLayout, nameFontSize, titleFontSize, pagePadding, gradientFrom, gradientTo, renderContactInfo, onSectionClick])
-
-  /**
-   * 渲染技能展示
-   */
-  const renderSkills = () => {
-    if (!skills || skills.length === 0) return null
-    
-    const displayStyle = skillsConfig?.displayStyle || 'tags'
-    
-    switch (displayStyle) {
-      case 'progress':
-        return (
-          <div className="grid grid-cols-2 gap-3">
-            {skills.map(skill => (
-              <div key={skill.id}>
-                <div className="flex justify-between text-xs mb-1">
-                  <span className="font-medium text-gray-700">{skill.name}</span>
-                  {skillsConfig?.showLevel && (
-                    <span className="text-gray-400">{skill.level}%</span>
-                  )}
-                </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div 
-                    className="h-full rounded-full transition-all"
-                    style={{ 
-                      width: `${skill.level}%`,
-                      backgroundColor: colors.primary
-                    }}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )
-      case 'list':
-        return (
-          <div className="flex flex-col gap-1.5">
-            {skills.map(skill => (
-              <div key={skill.id} className="flex items-center gap-2 text-sm text-gray-600">
-                <span style={{ color: colors.primary }}>•</span>
-                <span>{skill.name}</span>
-                {skillsConfig?.showLevel && (
-                  <span className="text-gray-400 ml-auto">{skill.level}%</span>
-                )}
-              </div>
-            ))}
-          </div>
-        )
-      case 'cards':
-        return (
-          <div className="grid grid-cols-3 gap-2">
-            {skills.map(skill => (
-              <div 
-                key={skill.id}
-                className="p-2 rounded-lg text-center border"
-                style={{ borderColor: `${colors.primary}30` }}
-              >
-                <div className="text-sm font-medium text-gray-700">{skill.name}</div>
-                {skillsConfig?.showLevel && (
-                  <div className="text-xs text-gray-400 mt-0.5">{skill.level}%</div>
-                )}
-              </div>
-            ))}
-          </div>
-        )
-      case 'grid':
-        return (
-          <div className="grid grid-cols-4 gap-2">
-            {skills.map(skill => (
-              <div 
-                key={skill.id}
-                className="text-center p-2 rounded"
-                style={{ backgroundColor: `${colors.primary}08` }}
-              >
-                <div className="text-sm text-gray-700">{skill.name}</div>
-              </div>
-            ))}
-          </div>
-        )
-      case 'radar':
-        return (
-          <div className="grid grid-cols-3 gap-4">
-            {skills.map(skill => (
-              <div key={skill.id} className="flex flex-col items-center">
-                <div 
-                  className="w-12 h-12 rounded-full border-4 flex items-center justify-center"
-                  style={{ 
-                    borderColor: colors.primary,
-                    opacity: (skill.level || 50) / 100
-                  }}
-                >
-                  <span className="text-xs font-medium" style={{ color: colors.primary }}>
-                    {skill.level}%
-                  </span>
-                </div>
-                <span className="text-xs text-gray-500 mt-1 text-center">{skill.name}</span>
-              </div>
-            ))}
-          </div>
-        )
-      case 'tags':
-      default:
-        return (
-          <div className="flex flex-wrap gap-2">
-            {skills.map(skill => (
-              <span 
-                key={skill.id}
-                className="px-3 py-1.5 rounded-full font-medium"
-                style={{ 
-                  backgroundColor: `${colors.primary}10`,
-                  color: colors.primary,
-                  fontSize: `${contentFontSize}px`
-                }}
-              >
-                {skill.name}
-              </span>
-            ))}
-          </div>
-        )
-    }
-  }
-
-
-  // 各个模块的渲染函数
-  const renderPersonalSummary = () => {
-    if (!personalInfo.summary) return null
-    return (
-      <section onClick={() => onSectionClick?.('personal')}>
-        <p 
-          className="text-gray-600"
-          style={{ fontSize: `${contentFontSize}px`, lineHeight }}
-        >
-          {personalInfo.summary}
-        </p>
-      </section>
-    )
-  }
-
-  const renderExperience = () => {
-    if (!experience || experience.length === 0) return null
-    return (
-      <section onClick={() => onSectionClick?.('experience')}>
-        <h2 
-          className="font-bold mb-5 pb-2 flex items-center gap-2"
-          style={{ 
-            color: colors.primary,
-            borderBottom: `2px solid ${colors.primary}20`,
-            fontSize: `${titleFontSize}px`
-          }}
-        >
-          <Briefcase size={18} />
-          {t.editor.experience.title}
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: `${itemSpacing + 8}px` }}>
-          {experience.map(exp => (
-            <div key={exp.id} className="relative pl-4 border-l-2" style={{ borderColor: `${colors.primary}30` }}>
-              <div 
-                className="absolute -left-[5px] top-1.5 w-2 h-2 rounded-full"
-                style={{ backgroundColor: colors.primary }}
-              />
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 
-                    className="font-bold text-gray-800"
-                    style={{ fontSize: `${contentFontSize}px` }}
-                  >
-                    {exp.position}
-                  </h3>
-                  <p 
-                    className="font-medium" 
-                    style={{ color: colors.primary, fontSize: `${smallFontSize}px` }}
-                  >
-                    {exp.company}
-                  </p>
-                </div>
-                <span 
-                  className="text-gray-400 bg-gray-50 px-2 py-1 rounded flex-shrink-0"
-                  style={{ fontSize: `${smallFontSize - 2}px` }}
-                >
-                  {formatDateStr(exp.startDate)} - {exp.current ? t.editor.experience.current : formatDateStr(exp.endDate)}
-                </span>
-              </div>
-              <ul className="space-y-1.5 mt-3">
-                {exp.description.map((desc, i) => (
-                  <li 
-                    key={i} 
-                    className="text-gray-600 flex items-start gap-2"
-                    style={{ fontSize: `${smallFontSize}px`, lineHeight }}
-                  >
-                    <span style={{ color: colors.accent }}>→</span>
-                    <span>{desc}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  const renderEducation = () => {
-    if (!education || education.length === 0) return null
-    return (
-      <section onClick={() => onSectionClick?.('education')}>
-        <h2 
-          className="font-bold mb-5 pb-2"
-          style={{ 
-            color: colors.primary,
-            borderBottom: `2px solid ${colors.primary}20`,
-            fontSize: `${titleFontSize}px`
-          }}
-        >
-          {t.editor.education.title}
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: `${itemSpacing}px` }}>
-          {education.map(edu => (
-            <div key={edu.id} className="flex justify-between items-start">
-              <div>
-                <h3 
-                  className="font-bold text-gray-800"
-                  style={{ fontSize: `${contentFontSize}px` }}
-                >
-                  {edu.school}
-                </h3>
-                <p 
-                  className="text-gray-600"
-                  style={{ fontSize: `${smallFontSize}px` }}
-                >
-                  {edu.degree} · {edu.major}
-                </p>
-                {edu.gpa && (
-                  <p 
-                    className="text-gray-400 mt-1"
-                    style={{ fontSize: `${smallFontSize - 2}px` }}
-                  >
-                    GPA: {edu.gpa}
-                  </p>
-                )}
-              </div>
-              <span 
-                className="text-gray-400 flex-shrink-0"
-                style={{ fontSize: `${smallFontSize - 2}px` }}
-              >
-                {formatDateStr(edu.startDate)} - {formatDateStr(edu.endDate)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  const renderSkillsSection = () => {
-    if (!skills || skills.length === 0) return null
-    return (
-      <section onClick={() => onSectionClick?.('skills')}>
-        <h2 
-          className="font-bold mb-5 pb-2"
-          style={{ 
-            color: colors.primary,
-            borderBottom: `2px solid ${colors.primary}20`,
-            fontSize: `${titleFontSize}px`
-          }}
-        >
-          {t.editor.skills.title}
-        </h2>
-        {renderSkills()}
-      </section>
-    )
-  }
-
-  const renderProjects = () => {
-    if (!projects || projects.length === 0) return null
-    return (
-      <section onClick={() => onSectionClick?.('projects')}>
-        <h2 
-          className="font-bold mb-5 pb-2"
-          style={{ 
-            color: colors.primary,
-            borderBottom: `2px solid ${colors.primary}20`,
-            fontSize: `${titleFontSize}px`
-          }}
-        >
-          {t.editor.projects.title}
-        </h2>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: `${itemSpacing + 4}px` }}>
-          {projects.map(project => (
-            <div key={project.id} className="bg-gray-50 p-4 rounded-lg">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 
-                    className="font-bold text-gray-800"
-                    style={{ fontSize: `${contentFontSize}px` }}
-                  >
-                    {project.name}
-                  </h3>
-                  {project.url && (
-                    <a 
-                      href={project.url} 
-                      className="hover:underline" 
-                      style={{ color: colors.primary, fontSize: `${smallFontSize - 2}px` }}
-                    >
-                      {project.url}
-                    </a>
-                  )}
-                </div>
-                <span 
-                  className="text-gray-400 flex-shrink-0"
-                  style={{ fontSize: `${smallFontSize - 2}px` }}
-                >
-                  {formatDateStr(project.startDate)} - {formatDateStr(project.endDate)}
-                </span>
-              </div>
-              <p 
-                className="text-gray-600 mb-3"
-                style={{ fontSize: `${smallFontSize}px`, lineHeight }}
-              >
-                {project.description}
-              </p>
-              {project.technologies && (
-                <div className="flex flex-wrap gap-1.5">
-                  {project.technologies.map((tech, i) => (
-                    <span 
-                      key={i} 
-                      className="px-2 py-0.5 rounded"
-                      style={{ 
-                        backgroundColor: `${colors.accent}15`,
-                        color: colors.accent,
-                        fontSize: `${smallFontSize - 2}px`
-                      }}
-                    >
-                      {tech}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </section>
-    )
-  }
-
-  // 根据 sectionOrder 渲染模块
-  const renderSection = (sectionId: string) => {
-    switch (sectionId) {
-      case 'personal':
-        return renderPersonalSummary()
-      case 'experience':
-        return renderExperience()
-      case 'education':
-        return renderEducation()
-      case 'skills':
-        return renderSkillsSection()
-      case 'projects':
-        return renderProjects()
-      default:
-        return null
-    }
-  }
-
-  // 单列布局
-  if (columns === 1) {
-    return (
-      <div className="w-full min-h-full bg-white" style={{ fontFamily: fontFamily || 'Inter, sans-serif' }}>
-        {renderHeader}
-        <div 
-          style={{ 
-            display: 'flex', 
-            flexDirection: 'column', 
-            gap: `${sectionSpacing}px`,
-            padding: `${pagePadding}px`
-          }}
-        >
-          {sectionOrder.map(sectionId => (
-            <React.Fragment key={sectionId}>
-              {renderSection(sectionId)}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // 双列布局
-  return (
-    <div className="w-full min-h-full bg-white" style={{ fontFamily: fontFamily || 'Inter, sans-serif' }}>
-      {renderHeader}
-      <div 
-        className="flex"
-        style={{ 
-          gap: `${columnGap}px`,
-          padding: `${pagePadding}px`
+  const renderSectionTitle = (title: string, helperText?: string) => (
+    <div
+      className="flex items-end justify-between border-b"
+      style={{
+        borderColor,
+        paddingBottom: `${metrics.sectionTitlePaddingBottom}px`,
+        marginBottom: `${metrics.sectionTitleMarginBottom}px`
+      }}
+    >
+      <h2
+        className={`text-sm font-semibold ${isEnglish ? 'uppercase tracking-[0.1em]' : ''}`}
+        style={{
+          color: headingColor,
+          fontSize: `${metrics.sectionTitleSize}px`,
+          fontWeight: metrics.sectionTitleWeight
         }}
       >
-        {/* 左列 */}
-        <div 
-          style={{ 
-            width: `${leftColumnWidth}%`,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: `${sectionSpacing}px`
+        {title}
+      </h2>
+      {helperText && (
+        <span className="text-xs" style={{ color: mutedColor, fontWeight: metrics.metaWeight }}>
+          {helperText}
+        </span>
+      )}
+    </div>
+  )
+
+  /**
+   * 聚合技能分组
+   * 将技能统一为“分类 + 技能串”形式，减少标签噪音。
+   */
+  const groupSkillsByCategory = () => {
+    const fallbackCategory = locale === 'en' ? 'General' : '综合'
+    return skills.reduce<Record<string, typeof skills>>((groups, skill) => {
+      const category = skill.category || fallbackCategory
+      if (!groups[category]) {
+        groups[category] = []
+      }
+      groups[category].push(skill)
+      return groups
+    }, {})
+  }
+
+  const skillGroups = groupSkillsByCategory()
+
+  return (
+    <div
+      className="w-full min-h-full border bg-white"
+      style={{
+        fontFamily: fontFamilyStyle,
+        color: textColor,
+        fontSize: `${baseContentSize}px`,
+        lineHeight: metrics.bodyLineHeight,
+        padding: `${pagePadding}px`,
+        borderColor
+      }}
+    >
+      <section
+        className="cursor-pointer border-b pb-5"
+        onClick={() => onSectionClick?.('personal')}
+        style={{ marginBottom: `${sectionGap}px`, borderColor }}
+      >
+        <div
+          className="rounded-md px-4 py-3"
+          style={{
+            background: `linear-gradient(90deg, ${headingColor}14 0%, ${accentColor}10 70%, ${accentColor}06 100%)`,
+            border: `1px solid ${borderColor}`
           }}
         >
-          {columnSectionOrder.left.map(sectionId => (
-            <React.Fragment key={sectionId}>
-              {renderSection(sectionId)}
-            </React.Fragment>
-          ))}
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <h1
+                className="font-semibold tracking-[0.02em]"
+                style={{
+                  fontSize: `${metrics.nameSize}px`,
+                  color: headingColor,
+                  fontWeight: metrics.nameWeight
+                }}
+              >
+                {personalInfo.name}
+              </h1>
+              <p
+                className="mt-1 font-medium"
+                style={{
+                  fontSize: `${metrics.roleSize}px`,
+                  color: mutedColor,
+                  fontWeight: metrics.roleWeight
+                }}
+              >
+                {personalInfo.title}
+              </p>
+              {!!getContactSummary() && (
+                <p
+                  style={{
+                    marginTop: `${metrics.bulletGap + 1}px`,
+                    color: mutedColor,
+                    fontSize: `${metrics.metaSize}px`,
+                    fontWeight: metrics.metaWeight
+                  }}
+                >
+                  {getContactSummary()}
+                </p>
+              )}
+            </div>
+            {(personalInfo.avatar || contactQRCodeUrl) && (
+              <div className="flex flex-col items-end gap-2">
+                {personalInfo.avatar && (
+                  <Image
+                    src={personalInfo.avatar}
+                    alt={personalInfo.name}
+                    width={metrics.headerAvatarSize}
+                    height={metrics.headerAvatarSize}
+                    unoptimized
+                    className={getAvatarClassName(styleConfig, 'h-[72px] w-[72px]')}
+                    style={{
+                      ...getAvatarInlineStyle(
+                        personalInfo.avatarBorderRadius,
+                        styleConfig,
+                        metrics.headerAvatarSize
+                      ),
+                      border: `1px solid ${borderColor}`
+                    }}
+                  />
+                )}
+                {contactQRCodeUrl && (
+                  <div className="rounded border bg-white p-1.5 text-center" style={{ borderColor }}>
+                    <Image
+                      src={contactQRCodeUrl}
+                      alt={isEnglish ? 'Contact QR Code' : '联系方式二维码'}
+                      width={68}
+                      height={68}
+                      unoptimized
+                      className="h-[68px] w-[68px]"
+                    />
+                    <p className="mt-1 text-[10px]" style={{ color: mutedColor }}>
+                      {isEnglish ? 'Contact QR' : '联系二维码'}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-        {/* 右列 */}
-        <div 
-          style={{ 
-            width: `${100 - leftColumnWidth}%`,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: `${sectionSpacing}px`
-          }}
-        >
-          {columnSectionOrder.right.map(sectionId => (
-            <React.Fragment key={sectionId}>
-              {renderSection(sectionId)}
-            </React.Fragment>
-          ))}
+        {personalInfo.summary && (
+          <p
+            className="whitespace-pre-line"
+            style={{
+              marginTop: `${metrics.entryGap - 3}px`,
+              lineHeight: metrics.summaryLineHeight
+            }}
+          >
+            {personalInfo.summary}
+          </p>
+        )}
+      </section>
+
+      <div className="grid grid-cols-[1.65fr,1fr]" style={{ columnGap: `${Math.max(sectionGap - 2, metrics.entryGap + 8)}px` }}>
+        <div>
+          {experience.length > 0 && (
+            <section
+              className="cursor-pointer"
+              onClick={() => onSectionClick?.('experience')}
+              style={{ marginBottom: `${sectionGap}px` }}
+            >
+              {renderSectionTitle(
+                t.editor.experience.title,
+                locale === 'en' ? `${experience.length} records` : `${experience.length} 条记录`
+              )}
+              <div style={{ display: 'grid', rowGap: `${metrics.entryGap}px` }}>
+                {experience.map((exp) => (
+                  <article key={exp.id} className="pb-3 last:pb-0">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h3
+                        className="font-semibold"
+                        style={{
+                          color: headingColor,
+                          fontSize: `${metrics.itemTitleSize}px`,
+                          fontWeight: metrics.itemTitleWeight
+                        }}
+                      >
+                        {exp.position}
+                      </h3>
+                      <span
+                        className="font-medium"
+                        style={{
+                          color: mutedColor,
+                          fontSize: `${metrics.metaSize}px`,
+                          fontWeight: metrics.metaWeight,
+                          minWidth: `${metrics.dateColumnWidth}px`,
+                          textAlign: 'right'
+                        }}
+                      >
+                        {formatPeriod(exp.startDate, exp.endDate, exp.current)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm font-medium" style={{ color: headingColor }}>
+                      {exp.company}
+                      {exp.location && <span style={{ color: mutedColor }}> · {exp.location}</span>}
+                    </p>
+                    {exp.description.length > 0 && (
+                      <ul
+                        className="pl-4"
+                        style={{
+                          marginTop: `${metrics.bulletGap}px`,
+                          display: 'grid',
+                          rowGap: `${metrics.bulletGap}px`
+                        }}
+                      >
+                        {exp.description.map((desc, index) => (
+                          <li key={`${exp.id}-desc-${index}`} className="list-disc">
+                            {desc}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {projects.length > 0 && (
+            <section className="cursor-pointer" onClick={() => onSectionClick?.('projects')}>
+              {renderSectionTitle(
+                t.editor.projects.title,
+                locale === 'en' ? `${projects.length} projects` : `${projects.length} 个项目`
+              )}
+              <div style={{ display: 'grid', rowGap: `${metrics.entryGap}px` }}>
+                {projects.map((project) => (
+                  <article key={project.id} className="pb-3 last:pb-0">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <h3
+                        className="font-semibold"
+                        style={{
+                          color: headingColor,
+                          fontSize: `${metrics.itemTitleSize}px`,
+                          fontWeight: metrics.itemTitleWeight
+                        }}
+                      >
+                        {project.name}
+                      </h3>
+                      <span
+                        className="font-medium"
+                        style={{
+                          color: mutedColor,
+                          fontSize: `${metrics.metaSize}px`,
+                          fontWeight: metrics.metaWeight,
+                          minWidth: `${metrics.dateColumnWidth}px`,
+                          textAlign: 'right'
+                        }}
+                      >
+                        {formatDateStr(project.startDate)} - {formatDateStr(project.endDate)}
+                      </span>
+                    </div>
+                    <p className="mt-1.5">{project.description}</p>
+                    {project.highlights.length > 0 && (
+                      <ul
+                        className="pl-4"
+                        style={{
+                          marginTop: `${metrics.bulletGap}px`,
+                          display: 'grid',
+                          rowGap: `${metrics.bulletGap}px`
+                        }}
+                      >
+                        {project.highlights.map((highlight, index) => (
+                          <li key={`${project.id}-highlight-${index}`} className="list-disc">
+                            {highlight}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
         </div>
+
+        <aside className="border-l pl-5" style={{ borderColor }}>
+          {skills.length > 0 && (
+            <section
+              className="cursor-pointer"
+              onClick={() => onSectionClick?.('skills')}
+              style={{ marginBottom: `${sectionGap}px` }}
+            >
+              {renderSectionTitle(
+                t.editor.skills.title,
+                locale === 'en' ? `${skills.length} skills` : `${skills.length} 项技能`
+              )}
+              <div style={{ display: 'grid', rowGap: `${metrics.bulletGap + 1}px` }}>
+                {Object.entries(skillGroups).map(([category, items]) => (
+                  <article key={category}>
+                    <h3 className="text-xs font-semibold uppercase tracking-[0.08em]" style={{ color: mutedColor }}>
+                      {category}
+                    </h3>
+                    <p className="mt-1 text-sm" style={{ color: textColor }}>
+                      {items.map((skill, index) => (
+                        <span key={skill.id}>
+                          {skill.name}
+                          {index < items.length - 1 && <span style={{ color: mutedColor }}> / </span>}
+                        </span>
+                      ))}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {education.length > 0 && (
+            <section className="cursor-pointer" onClick={() => onSectionClick?.('education')}>
+              {renderSectionTitle(
+                t.editor.education.title,
+                locale === 'en' ? `${education.length} records` : `${education.length} 条记录`
+              )}
+              <div style={{ display: 'grid', rowGap: `${metrics.entryGap - 2}px` }}>
+                {education.map((edu) => (
+                  <article key={edu.id}>
+                    <h3
+                      className="font-semibold"
+                      style={{
+                        color: headingColor,
+                        fontSize: `${metrics.itemTitleSize}px`,
+                        fontWeight: metrics.itemTitleWeight
+                      }}
+                    >
+                      {edu.school}
+                    </h3>
+                    <p className="mt-1 text-sm" style={{ color: mutedColor }}>
+                      {edu.degree} · {edu.major}
+                    </p>
+                    <p
+                      className="mt-1 text-xs"
+                      style={{ color: mutedColor, fontSize: `${metrics.metaSize}px`, fontWeight: metrics.metaWeight }}
+                    >
+                      {formatDateStr(edu.startDate)} - {formatDateStr(edu.endDate)}
+                      {edu.gpa && <span> · GPA {edu.gpa}</span>}
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+        </aside>
       </div>
     </div>
   )

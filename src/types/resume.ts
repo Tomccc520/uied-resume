@@ -15,6 +15,7 @@ export interface PersonalInfo {
   phone: string
   location: string
   website?: string
+  contactQRCode?: string
   summary: string
   avatar?: string  // 添加头像字段
   avatarBorderRadius?: number  // 头像圆角半径 (0-50)

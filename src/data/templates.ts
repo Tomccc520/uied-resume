@@ -3,8 +3,8 @@
  * @copyright UIED技术团队 (https://fsuied.com)
  * @author UIED技术团队
  * @createDate 2025-09-22
- * @updateDate 2026-01-31 - 优化模板设计，精选6个高质量模板
- * @description 简历模板配置 - 精选实用模板
+ * @updateDate 2026-03-26 - 收敛为3套市场化模板
+ * @description 简历模板配置 - 市场化三套模板
  */
 
 import { TemplateStyle, TemplateCategory } from '@/types/template'
@@ -100,10 +100,10 @@ export const resumeTemplates: TemplateStyle[] = [
   // 3. 现代时间轴 - 职业发展清晰
   {
     id: 'timeline-layout',
-    name: '逆序时间线版',
-    nameEn: 'Reverse Chronological',
-    description: '主流招聘常用时间线版式，突出最近经历与岗位成长路径',
-    descriptionEn: 'Mainstream reverse-chronological format focused on recent experience',
+    name: 'Boss 直聘紧凑',
+    nameEn: 'Boss Compact',
+    description: '紧凑时间线版式，适合快速浏览与高频沟通场景',
+    descriptionEn: 'Compact timeline layout for fast recruiter scanning',
     preview: '/templates/timeline-layout.svg',
     category: 'general',
     subCategory: 'modern',
@@ -264,10 +264,10 @@ export const resumeTemplates: TemplateStyle[] = [
   // 7. 创意卡片 - 视觉突出
   {
     id: 'card-layout',
-    name: '双栏专业版',
-    nameEn: 'Professional Two-Column',
-    description: '主流双栏简历，左侧经历项目、右侧技能教育，适合社招投递',
-    descriptionEn: 'Professional two-column layout with main experience and side skill panel',
+    name: 'Canva 商务简洁',
+    nameEn: 'Canva Business Clean',
+    description: '商务双栏版式，信息分区清晰，兼顾专业感与可读性',
+    descriptionEn: 'Business two-column layout with clean content hierarchy',
     preview: '/templates/card-layout.svg',
     category: 'general',
     subCategory: 'creative',
@@ -431,10 +431,10 @@ export const resumeTemplates: TemplateStyle[] = [
   // 11. 简历横幅 - 顶部突出
   {
     id: 'banner-layout',
-    name: '单栏标准版',
-    nameEn: 'ATS Single-Column',
-    description: 'ATS 优先的单栏版式，章节顺序清晰，适合在线系统投递',
-    descriptionEn: 'ATS-first single-column layout for online application systems',
+    name: 'Indeed 标准投递',
+    nameEn: 'Indeed Standard Apply',
+    description: '单栏 ATS 投递版，模块顺序标准，适配主流在线投递系统',
+    descriptionEn: 'ATS-first single-column format for mainstream online applications',
     preview: '/templates/banner-layout.svg',
     category: 'general',
     subCategory: 'modern',
@@ -540,86 +540,97 @@ export const careerCategories = [
 ]
 
 /**
+ * 三套核心模板 ID
+ * 仅保留市场化投递风三套，避免模板过多造成选择负担。
+ */
+export const CORE_TEMPLATE_IDS = ['banner-layout', 'card-layout', 'timeline-layout'] as const
+const CORE_TEMPLATE_ID_SET = new Set<string>(CORE_TEMPLATE_IDS)
+
+/**
+ * 判断模板是否在当前可见范围
+ * 除 hidden 控制外，再收敛到三套核心模板。
+ */
+const isVisibleCoreTemplate = (template: TemplateStyle) => {
+  return !template.hidden && CORE_TEMPLATE_ID_SET.has(template.id)
+}
+
+/**
  * 模板分类（按职业岗位）
  */
-export const templateCategories: TemplateCategory[] = careerCategories.map(career => ({
-  id: career.id,
-  name: career.name,
-  nameEn: career.nameEn,
-  description: `适合${career.name}岗位的简历模板`,
-  descriptionEn: `Resume templates for ${career.nameEn} positions`,
-  icon: career.icon,
-  templates: resumeTemplates.filter(t => t.category === career.id && !t.hidden)
-}))
+export const templateCategories: TemplateCategory[] = careerCategories
+  .map(career => ({
+    id: career.id,
+    name: career.name,
+    nameEn: career.nameEn,
+    description: `适合${career.name}岗位的简历模板`,
+    descriptionEn: `Resume templates for ${career.nameEn} positions`,
+    icon: career.icon,
+    templates: resumeTemplates.filter(t => t.category === career.id && isVisibleCoreTemplate(t))
+  }))
+  .filter(category => category.templates.length > 0)
 
 /**
  * 获取默认模板
  */
 export const getDefaultTemplate = (): TemplateStyle => {
-  return resumeTemplates.find(t => t.id === 'two-column-standard') || resumeTemplates[0]
+  return getAvailableTemplates().find(t => t.id === 'banner-layout') || getAvailableTemplates()[0]
 }
 
 /**
  * 根据ID获取模板
  */
 export const getTemplateById = (id: string): TemplateStyle | undefined => {
-  return resumeTemplates.find(t => t.id === id)
+  return getAvailableTemplates().find(t => t.id === id)
 }
 
 /**
  * 获取免费模板（排除隐藏）
  */
 export const getFreeTemplates = (): TemplateStyle[] => {
-  return resumeTemplates.filter(t => !t.isPremium && !t.hidden)
+  return resumeTemplates.filter(t => !t.isPremium && isVisibleCoreTemplate(t))
 }
 
 /**
  * 获取高级模板（排除隐藏）
  */
 export const getPremiumTemplates = (): TemplateStyle[] => {
-  return resumeTemplates.filter(t => t.isPremium && !t.hidden)
+  return resumeTemplates.filter(t => t.isPremium && isVisibleCoreTemplate(t))
 }
 
 /**
  * 流行模板ID列表
  */
 export const popularTemplateIds = [
-  'two-column-standard',
-  'minimal-text',
   'banner-layout',
   'card-layout',
-  'timeline-layout',
-  'table-layout',
-  'divider-layout',
-  'compact-layout',
-  'line-minimal'
+  'timeline-layout'
 ]
 
 /**
  * 有效的模板分类（职业类型）
  */
-export const VALID_CATEGORIES = ['designer', 'general'] as const
+export const VALID_CATEGORIES = ['general'] as const
 export type ValidCategory = typeof VALID_CATEGORIES[number]
 
 /**
  * 获取可用模板（排除隐藏模板）
  */
 export const getAvailableTemplates = (): TemplateStyle[] => {
-  return resumeTemplates.filter(t => !t.hidden)
+  return resumeTemplates.filter(isVisibleCoreTemplate)
 }
 
 /**
  * 按分类获取可用模板
  */
 export const getTemplatesByCategory = (category: string): TemplateStyle[] => {
-  return resumeTemplates.filter(t => t.category === category && !t.hidden)
+  return resumeTemplates.filter(t => t.category === category && isVisibleCoreTemplate(t))
 }
 
 /**
  * 按子分类获取模板
  */
 export const getTemplatesBySubCategory = (subCategory: string): TemplateStyle[] => {
-  return resumeTemplates.filter(t => t.subCategory === subCategory && !t.hidden)
+  return resumeTemplates.filter(t => t.subCategory === subCategory && isVisibleCoreTemplate(t))
 }
 
 /**

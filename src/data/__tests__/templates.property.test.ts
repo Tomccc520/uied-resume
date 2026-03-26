@@ -10,8 +10,8 @@
  * 
  * Property 6: Template Category and Count
  * *For any* call to getAvailableTemplates(), the result SHALL contain at least 
- * 8 templates, and each template SHALL have a valid category from the set 
- * {modern, classic, creative, minimal}, with at least 2 templates per category.
+ * 3 templates, and each template SHALL have a valid category from the set 
+ * {designer, developer, hr, marketing, finance, general}, with at least 1 template per category.
  * **Validates: Requirements 3.2, 3.3, 3.10**
  * 
  * Property 8: Data Preservation on Template Change
@@ -23,7 +23,7 @@
 
 import * as fc from 'fast-check';
 import { 
-  resumeTemplates, 
+  CORE_TEMPLATE_IDS,
   getAvailableTemplates, 
   getTemplatesByCategory,
   getTemplatesGroupedByCategory,
@@ -86,10 +86,19 @@ describe('Property 5: Hidden Templates Exclusion', () => {
  * **Validates: Requirements 3.2, 3.3, 3.10**
  */
 describe('Property 6: Template Category and Count', () => {
-  const MINIMUM_TOTAL_TEMPLATES = 8;
-  const MINIMUM_PER_CATEGORY = 2;
+  const MINIMUM_TOTAL_TEMPLATES = 3;
+  const MINIMUM_PER_CATEGORY = 1;
 
-  it('should have at least 8 available templates', () => {
+  it('should only expose the 3 core templates', () => {
+    const availableTemplates = getAvailableTemplates();
+    const availableIds = availableTemplates.map((template) => template.id).sort();
+    const expectedIds = [...CORE_TEMPLATE_IDS].sort();
+
+    // 仅允许三套核心模板进入可见列表，避免旧模板回流到选择器。
+    expect(availableIds).toEqual(expectedIds);
+  });
+
+  it('should have at least 3 available templates', () => {
     const availableTemplates = getAvailableTemplates();
     expect(availableTemplates.length).toBeGreaterThanOrEqual(MINIMUM_TOTAL_TEMPLATES);
   });
@@ -103,7 +112,7 @@ describe('Property 6: Template Category and Count', () => {
     });
   });
 
-  it('each main category should have at least 2 templates', () => {
+  it('each main category should have at least 1 template', () => {
     const grouped = getTemplatesGroupedByCategory();
     
     VALID_CATEGORIES.forEach(category => {
@@ -112,7 +121,7 @@ describe('Property 6: Template Category and Count', () => {
     });
   });
 
-  it('property: for any valid category, getTemplatesByCategory returns at least 2 templates', () => {
+  it('property: for any valid category, getTemplatesByCategory returns at least 1 template', () => {
     fc.assert(
       fc.property(
         fc.constantFrom(...VALID_CATEGORIES),

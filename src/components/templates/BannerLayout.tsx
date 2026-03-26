@@ -14,7 +14,8 @@ import { StyleConfig } from '@/contexts/StyleContext'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { formatDate } from '@/utils/dateFormatter'
 import { getAvatarClassName, getAvatarInlineStyle } from '@/utils/avatarUtils'
-import { getUnifiedResumeMetrics } from './resumePrintMetrics'
+import { getMarketResumeMetrics } from './marketResumeMetrics'
+import { createContactQRCodeImageUrl, resolveContactQRCodePayload } from '@/utils/contactQRCode'
 
 interface TemplateProps {
   resumeData: ResumeData
@@ -36,15 +37,19 @@ export const BannerLayout: React.FC<TemplateProps> = ({
   const { locale, t } = useLanguage()
 
   const fontFamilyStyle = fontFamily || '"Calibri", "Arial", "PingFang SC", "Hiragino Sans GB", sans-serif'
-  const pagePadding = styleConfig.layout?.padding || 32
+  const pagePadding = Math.max(styleConfig.layout?.padding || 34, 32)
   const baseContentSize = fontSize?.content || 14
-  const metrics = getUnifiedResumeMetrics({ baseContentSize, sectionSpacing: spacing?.section })
+  const metrics = getMarketResumeMetrics({ baseContentSize, sectionSpacing: spacing?.section })
   const sectionGap = metrics.sectionGap
-  const headingColor = colors.primary || '#1f2937'
-  const textColor = colors.text || '#1f2937'
-  const mutedColor = colors.secondary || '#6b7280'
-  const borderColor = '#d8dee7'
+  const headingColor = colors.primary || '#0f172a'
+  const textColor = colors.text || '#111827'
+  const mutedColor = colors.secondary || '#64748b'
+  const borderColor = '#d7dee8'
+  const rowDividerColor = '#e7edf4'
+  const summaryBgColor = '#f8fafc'
   const isEnglish = locale === 'en'
+  const contactQRCodePayload = resolveContactQRCodePayload(personalInfo)
+  const contactQRCodeUrl = contactQRCodePayload ? createContactQRCodeImageUrl(contactQRCodePayload, 176) : null
 
   /**
    * 格式化日期文本
@@ -73,16 +78,19 @@ export const BannerLayout: React.FC<TemplateProps> = ({
         marginBottom: `${metrics.sectionTitleMarginBottom}px`
       }}
     >
-      <h2
-        className={`text-sm font-semibold ${isEnglish ? 'uppercase tracking-[0.1em]' : ''}`}
-        style={{
-          color: headingColor,
-          fontSize: `${metrics.sectionTitleSize}px`,
-          fontWeight: metrics.sectionTitleWeight
-        }}
-      >
-        {title}
-      </h2>
+      <div className="inline-flex items-center gap-2">
+        <span className="h-3 w-[2px] rounded-full" style={{ backgroundColor: headingColor }} />
+        <h2
+          className={`text-sm font-semibold ${isEnglish ? 'uppercase tracking-[0.1em]' : ''}`}
+          style={{
+            color: headingColor,
+            fontSize: `${metrics.sectionTitleSize}px`,
+            fontWeight: metrics.sectionTitleWeight
+          }}
+        >
+          {title}
+        </h2>
+      </div>
       {helperText && (
         <span className="text-xs" style={{ color: mutedColor, fontWeight: metrics.metaWeight }}>
           {helperText}
@@ -96,7 +104,10 @@ export const BannerLayout: React.FC<TemplateProps> = ({
    * 采用“·”分隔的招聘常见展示形式。
    */
   const getContactSummary = () => {
-    return [personalInfo.phone, personalInfo.email, personalInfo.location, personalInfo.website]
+    const websiteLabel = personalInfo.website
+      ? personalInfo.website.replace(/^https?:\/\//i, '').replace(/\/$/, '')
+      : ''
+    return [personalInfo.phone, personalInfo.email, personalInfo.location, websiteLabel]
       .filter(Boolean)
       .join(' · ')
   }
@@ -118,6 +129,9 @@ export const BannerLayout: React.FC<TemplateProps> = ({
   }
 
   const skillGroups = groupSkillsByCategory()
+  const contactSummary = getContactSummary()
+  const skillGroupEntries = Object.entries(skillGroups)
+  const skillColumns = skillGroupEntries.length > 2 ? 'repeat(2, minmax(0, 1fr))' : '1fr'
 
   return (
     <div
@@ -139,7 +153,7 @@ export const BannerLayout: React.FC<TemplateProps> = ({
           borderColor
         }}
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex items-start justify-between gap-5">
           <div className="flex-1">
             <h1
               className="font-semibold tracking-[0.02em]"
@@ -161,49 +175,71 @@ export const BannerLayout: React.FC<TemplateProps> = ({
             >
               {personalInfo.title}
             </p>
-            {!!getContactSummary() && (
+            {!!contactSummary && (
               <p
                 style={{
                   marginTop: `${metrics.bulletGap + 1}px`,
                   color: mutedColor,
                   fontSize: `${metrics.metaSize}px`,
-                  fontWeight: metrics.metaWeight
+                  fontWeight: metrics.metaWeight,
+                  lineHeight: 1.45
                 }}
               >
-                {getContactSummary()}
+                {contactSummary}
               </p>
             )}
           </div>
-          {personalInfo.avatar && (
-            <Image
-              src={personalInfo.avatar}
-              alt={personalInfo.name}
-              width={metrics.headerAvatarSize}
-              height={metrics.headerAvatarSize}
-              unoptimized
-              className={getAvatarClassName(styleConfig, 'h-[72px] w-[72px]')}
-              style={{
-                ...getAvatarInlineStyle(
-                  personalInfo.avatarBorderRadius,
-                  styleConfig,
-                  metrics.headerAvatarSize
-                ),
-                border: `1px solid ${borderColor}`
-              }}
-            />
+          {(personalInfo.avatar || contactQRCodeUrl) && (
+            <div className="flex flex-col items-end gap-2.5">
+              {personalInfo.avatar && (
+                <Image
+                  src={personalInfo.avatar}
+                  alt={personalInfo.name}
+                  width={metrics.headerAvatarSize}
+                  height={metrics.headerAvatarSize}
+                  unoptimized
+                  className={getAvatarClassName(styleConfig, 'h-[72px] w-[72px]')}
+                  style={{
+                    ...getAvatarInlineStyle(
+                      personalInfo.avatarBorderRadius,
+                      styleConfig,
+                      metrics.headerAvatarSize
+                    ),
+                    border: `1px solid ${borderColor}`
+                  }}
+                />
+              )}
+              {contactQRCodeUrl && (
+                <div className="rounded border bg-white p-1.5 text-center" style={{ borderColor: rowDividerColor }}>
+                  <Image
+                    src={contactQRCodeUrl}
+                    alt={isEnglish ? 'Contact QR Code' : '联系方式二维码'}
+                    width={68}
+                    height={68}
+                    unoptimized
+                    className="h-[68px] w-[68px]"
+                  />
+                  <p className="mt-1 text-[10px]" style={{ color: mutedColor }}>
+                    {isEnglish ? 'Contact QR' : '联系二维码'}
+                  </p>
+                </div>
+              )}
+            </div>
           )}
         </div>
         {personalInfo.summary && (
-          <p
-            className="whitespace-pre-line"
+          <div
+            className="whitespace-pre-line rounded-sm border-l-[3px] px-3 py-2"
             style={{
               marginTop: `${metrics.entryGap - 3}px`,
               color: textColor,
-              lineHeight: metrics.summaryLineHeight
+              lineHeight: metrics.summaryLineHeight,
+              backgroundColor: summaryBgColor,
+              borderColor: rowDividerColor
             }}
           >
             {personalInfo.summary}
-          </p>
+          </div>
         )}
       </section>
 
@@ -218,8 +254,14 @@ export const BannerLayout: React.FC<TemplateProps> = ({
             locale === 'en' ? `${experience.length} records` : `${experience.length} 条记录`
           )}
           <div style={{ display: 'grid', rowGap: `${metrics.entryGap}px` }}>
-            {experience.map((exp) => (
-              <article key={exp.id} className="pb-3 last:pb-0">
+            {experience.map((exp, index) => (
+              <article
+                key={exp.id}
+                className="pb-3 last:pb-0"
+                style={{
+                  borderBottom: index < experience.length - 1 ? `1px solid ${rowDividerColor}` : 'none'
+                }}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <h3
                     className="font-semibold"
@@ -254,7 +296,8 @@ export const BannerLayout: React.FC<TemplateProps> = ({
                     style={{
                       marginTop: `${metrics.bulletGap}px`,
                       display: 'grid',
-                      rowGap: `${metrics.bulletGap}px`
+                      rowGap: `${metrics.bulletGap}px`,
+                      lineHeight: metrics.bodyLineHeight
                     }}
                   >
                     {exp.description.map((desc, index) => (
@@ -281,8 +324,14 @@ export const BannerLayout: React.FC<TemplateProps> = ({
             locale === 'en' ? `${projects.length} projects` : `${projects.length} 个项目`
           )}
           <div style={{ display: 'grid', rowGap: `${metrics.entryGap}px` }}>
-            {projects.map((project) => (
-              <article key={project.id} className="pb-3 last:pb-0">
+            {projects.map((project, index) => (
+              <article
+                key={project.id}
+                className="pb-3 last:pb-0"
+                style={{
+                  borderBottom: index < projects.length - 1 ? `1px solid ${rowDividerColor}` : 'none'
+                }}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <h3
                     className="font-semibold"
@@ -314,7 +363,8 @@ export const BannerLayout: React.FC<TemplateProps> = ({
                     style={{
                       marginTop: `${metrics.bulletGap}px`,
                       display: 'grid',
-                      rowGap: `${metrics.bulletGap}px`
+                      rowGap: `${metrics.bulletGap}px`,
+                      lineHeight: metrics.bodyLineHeight
                     }}
                   >
                     {project.highlights.map((highlight, index) => (
@@ -341,8 +391,14 @@ export const BannerLayout: React.FC<TemplateProps> = ({
             locale === 'en' ? `${education.length} records` : `${education.length} 条记录`
           )}
           <div style={{ display: 'grid', rowGap: `${metrics.entryGap - 2}px` }}>
-            {education.map((edu) => (
-              <article key={edu.id} className="pb-2.5 last:pb-0">
+            {education.map((edu, index) => (
+              <article
+                key={edu.id}
+                className="pb-2.5 last:pb-0"
+                style={{
+                  borderBottom: index < education.length - 1 ? `1px solid ${rowDividerColor}` : 'none'
+                }}
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <h3 className="font-semibold" style={{ color: headingColor, fontWeight: metrics.itemTitleWeight }}>
                     {edu.school}
@@ -376,13 +432,23 @@ export const BannerLayout: React.FC<TemplateProps> = ({
             t.editor.skills.title,
             locale === 'en' ? `${skills.length} skills` : `${skills.length} 项技能`
           )}
-          <div style={{ display: 'grid', rowGap: `${metrics.bulletGap}px` }}>
-            {Object.entries(skillGroups).map(([category, items]) => (
-              <article key={category} className="flex gap-2 text-sm">
-                <span className="min-w-[68px] font-semibold" style={{ color: headingColor }}>
+          <div
+            style={{
+              display: 'grid',
+              rowGap: `${metrics.bulletGap + 2}px`,
+              columnGap: `${metrics.entryGap + 8}px`,
+              gridTemplateColumns: skillColumns
+            }}
+          >
+            {skillGroupEntries.map(([category, items]) => (
+              <article key={category} className="text-sm">
+                <h3
+                  className="mb-1 font-semibold uppercase tracking-[0.06em]"
+                  style={{ color: mutedColor, fontSize: `${metrics.metaSize}px` }}
+                >
                   {category}
-                </span>
-                <p style={{ color: textColor }}>
+                </h3>
+                <p style={{ color: textColor, lineHeight: metrics.bodyLineHeight }}>
                   {items.map((skill, index) => (
                     <span key={skill.id}>
                       {skill.name}

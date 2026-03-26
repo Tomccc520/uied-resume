@@ -176,15 +176,13 @@ export default function TemplateCard({
 
   /**
    * 获取岗位与经验摘要
-   * 用一行文本展示适配人群，避免过多标签堆叠。
+   * 仅展示第一优先场景，避免标签过多造成信息噪音。
    */
   const getScenarioSummary = () => {
-    const roleSummary = getRecommendedRoles().map((role) => getRoleLabel(role)).join('/')
-    const experienceSummary = getRecommendedExperienceLevels()
-      .map((level) => getExperienceLabel(level))
-      .join('/')
+    const roleSummary = getRoleLabel(getRecommendedRoles()[0] || 'general')
+    const experienceSummary = getExperienceLabel(getRecommendedExperienceLevels()[0] || '1-3')
     return locale === 'en'
-      ? `Best for ${roleSummary} · ${experienceSummary}`
+      ? `For ${roleSummary} · ${experienceSummary}`
       : `适配 ${roleSummary} · ${experienceSummary}`
   }
 
@@ -194,7 +192,7 @@ export default function TemplateCard({
       tabIndex={0}
       onKeyDown={handleCardKeyDown}
       onClick={onClick}
-      className="relative overflow-hidden rounded-md border bg-white"
+      className="relative overflow-hidden rounded-lg border bg-white"
       style={{
         borderColor: isSelected ? '#334155' : '#d6dee8'
       }}
@@ -213,7 +211,7 @@ export default function TemplateCard({
         <div className="flex items-start justify-between gap-2">
           <div>
             <h3 className="text-sm font-semibold leading-5 text-slate-900">{getTemplateName()}</h3>
-            <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">{getTemplateDescription()}</p>
+            <p className="mt-1 line-clamp-1 text-xs leading-5 text-slate-500">{getTemplateDescription()}</p>
           </div>
           <button
             type="button"
@@ -229,11 +227,14 @@ export default function TemplateCard({
           </button>
         </div>
 
-        <div className="mt-2 space-y-1 text-[11px] text-slate-600">
-          <p>
-            {getStructureLabel()} · {getATSLabel()}
-          </p>
-          <p className="truncate">{getScenarioSummary()}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px]">
+          <span className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-slate-600">
+            {getStructureLabel()}
+          </span>
+          <span className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-slate-600">
+            {getATSLabel()}
+          </span>
+          <span className="truncate text-slate-500">{getScenarioSummary()}</span>
         </div>
 
         <div className="mt-3 flex items-center justify-between">
